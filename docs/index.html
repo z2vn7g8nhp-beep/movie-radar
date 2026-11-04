@@ -46,7 +46,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 a{color:inherit;text-decoration:none}
 img{display:block}
 :focus-visible{outline:2px solid var(--coral);outline-offset:3px;border-radius:10px}
-.hscroll{display:flex;align-items:flex-start;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px var(--pad) 14px;scroll-padding:0 var(--pad);scrollbar-width:none}
+.hscroll{display:flex;align-items:flex-start;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;padding:2px var(--pad) 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .hscroll::-webkit-scrollbar{display:none}
 /* 按下时轻轻缩一下 */
 .card,.row,.otk,.ev,.hero-in,.links a,.icon-btn,.tabs button{transition:transform .18s cubic-bezier(.3,.7,.4,1),background-color .2s,opacity .2s}
@@ -102,13 +102,26 @@ img{display:block}
 .r svg{width:14px;height:14px;flex:none}
 .r.im svg{width:24px}
 
-/* ---------- 首页主打：海报色的淡彩卡片 ---------- */
+/* ---------- 顶部：星标的待映，左右翻页 ---------- */
+.heroes{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 16px 12px;scroll-padding:0 16px;scrollbar-width:none;overscroll-behavior-x:contain}
+.heroes::-webkit-scrollbar{display:none}
+.heroes .hero{flex:none;width:calc(100% - 26px);margin:0;scroll-snap-align:start}
+.heroes .hero:only-child{width:100%}
+.hero-dots{display:flex;justify-content:center;gap:5px;margin:-4px 0 4px}
+.hero-dots i{width:5px;height:5px;border-radius:3px;background:var(--hair);transition:width .25s,background-color .25s}
+.hero-dots i.on{width:14px;background:var(--coral)}
 .hero{position:relative;margin:6px 16px 6px;border-radius:24px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
+.hero-empty{display:flex;gap:14px;align-items:center;margin:6px 16px 4px;padding:16px 18px;border-radius:20px;background:var(--card);box-shadow:0 1px 2px rgba(24,26,48,.04)}
+.hero-empty .ic{width:40px;height:40px;border-radius:20px;background:#fff6e0;color:var(--gold);display:grid;place-items:center;flex:none}
+.hero-empty .ic svg{width:20px;height:20px}
+.hero-empty b{display:block;font-size:15px;font-weight:500}
+.hero-empty span{display:block;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.5}
 .hero-bg{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(40px) saturate(1.5);opacity:.5;transform:scale(1.2)}
 .hero-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.55),rgba(255,255,255,.15))}
 .hero-in{position:relative;display:grid;grid-template-columns:108px 1fr;gap:18px;align-items:center;padding:18px;width:100%}
 .hero-poster{width:108px;aspect-ratio:2/3;border-radius:12px;object-fit:cover;background:var(--soft);box-shadow:0 12px 28px rgba(24,26,48,.22)}
-.hero-why{font-size:11px;color:var(--coral-ink);font-weight:500;margin-bottom:6px;letter-spacing:.02em}
+.hero-why{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#b07a00;font-weight:500;margin-bottom:6px;background:rgba(255,255,255,.65);border-radius:9px;padding:1px 8px 1px 6px}
+.hero-why svg{width:10px;height:10px;color:var(--gold)}
 .hero h2{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.2;margin:0 0 2px;letter-spacing:.02em}
 .hero .en{font-family:var(--latin);font-style:italic;color:var(--ink-2);font-size:13px;margin-bottom:10px;line-height:1.3}
 .hero .when{font-size:13px;color:var(--ink-2);margin-bottom:10px}
@@ -120,25 +133,32 @@ img{display:block}
 .sec{display:flex;align-items:baseline;gap:8px;padding:0 var(--pad);margin:26px 0 10px}
 .sec h3{margin:0;font-size:19px;font-weight:600}
 .sec .note{color:var(--faint);font-size:12px}
-.day{display:flex;align-items:baseline;gap:8px;padding:0 var(--pad);margin:24px 0 6px}
-.day .d{font-family:var(--num);font-size:30px;font-weight:200;line-height:1;letter-spacing:-.01em}
+.day{display:flex;align-items:baseline;gap:8px;padding:0 var(--pad);margin:18px 0 8px}
+.day .d{font-family:var(--num);font-size:24px;font-weight:200;line-height:1;letter-spacing:-.01em}
 .day .w{font-size:13px;color:var(--dim)}
 .day .rel{font-size:11px;color:var(--coral-ink);background:var(--coral-bg);border-radius:9px;padding:0 7px;line-height:18px;font-weight:500}
 
 /* ---------- 海报卡 ---------- */
-.card{flex:none;width:112px;scroll-snap-align:start;display:block}
-.card.lg{width:136px}
-.pw{position:relative;border-radius:14px;overflow:hidden;background:var(--soft);aspect-ratio:2/3;box-shadow:var(--shadow)}
+.card{flex:none;width:86px;display:block}
+.pw{position:relative;border-radius:10px;overflow:hidden;background:var(--soft);aspect-ratio:2/3;box-shadow:0 1px 2px rgba(24,26,48,.06),0 4px 10px rgba(24,26,48,.06)}
 .pw img{width:100%;height:100%;object-fit:cover}
-.pw .tk{position:absolute;left:6px;bottom:6px}
-.pw .star{position:absolute;right:6px;top:6px;width:22px;height:22px;border-radius:11px;background:rgba(255,255,255,.9);display:grid;place-items:center;color:var(--gold);box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.pw .star svg{width:12px;height:12px}
-.card .t{font-size:13px;font-weight:500;line-height:1.35;margin-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.card .s{font-size:11px;color:var(--faint);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .rates{margin-top:3px;gap:7px}
-.card .r{font-size:12px}
-.card .r svg{width:12px;height:12px}
-.card .r.im svg{width:21px}
+.pw .tk{position:absolute;left:5px;bottom:5px;height:18px;padding:0 6px;font-size:10px;--n:3px}
+.pw .tk b{font-size:10.5px}
+.pw .star{position:absolute;right:5px;top:5px;width:18px;height:18px;border-radius:9px;background:rgba(255,255,255,.9);display:grid;place-items:center;color:var(--gold);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.pw .star svg{width:10px;height:10px}
+.card .t{font-size:12px;font-weight:500;line-height:1.35;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .s{font-size:10.5px;color:var(--faint);margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .rates{margin-top:2px;gap:6px}
+.card .r{font-size:11px;gap:3px}
+.card .r svg{width:11px;height:11px}
+.card .r.im svg{width:19px}
+/* 热映是三列网格，卡片仍然大一点 */
+.grid .card .t{font-size:13px;margin-top:8px}
+.grid .card .s{font-size:11px}
+.grid .pw{border-radius:12px}
+.grid .card .r{font-size:12px}
+.grid .card .r svg{width:12px;height:12px}
+.grid .card .r.im svg{width:21px}
 
 /* ---------- 紧凑行 ---------- */
 .rows{margin:0 16px;background:var(--card);border-radius:18px;padding:2px 14px;box-shadow:0 1px 2px rgba(24,26,48,.04)}
@@ -351,6 +371,9 @@ function val(k, m){
   if (k === "tm") return m.tomato && m.tomato.critics != null ? m.tomato.critics + "%" : null;
 }
 function rates(m){ const h = ["db","im","tm"].map(k => { const v = val(k, m); return v ? `<span class="r ${k}">${IC[k]}${v}</span>` : ""; }).join(""); return h ? `<div class="rates">${h}</div>` : ""; }
+function tiny(c){ const w = c.short.split(/\s+/)[0]; return /[\u4e00-\u9fff]/.test(w) ? w.slice(0, 2) : w; }
+function tkMini(o){ const first = o.map(x => x[1].first).sort()[0], fresh = o.some(x => x[1].at && Date.now() - new Date(x[1].at) < 864e5);
+  return `<span class="tk${fresh ? " new" : ""}">${o.length > 1 ? o.length + " 家" : esc(tiny(o[0][0]))} <b>${md(first)}</b></span>`; }
 function tk(c, o, cls = ""){ const fresh = o.at && Date.now() - new Date(o.at) < 864e5;
   return `<span class="tk ${cls}${fresh ? " new" : ""}">${esc(c.short)} <b>${md(o.first)}</b></span>`; }
 
@@ -380,7 +403,7 @@ function card(m, opt = {}){
   const r = rates(m);
   return `<button class="card${opt.lg ? " lg" : ""}" data-id="${m.id}">
     <div class="pw"><img loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
-      ${isFav(m) ? `<span class="star">${IC.star}</span>` : ""}${o.length ? tk(o[0][0], o[0][1]) : ""}</div>
+      ${isFav(m) ? `<span class="star">${IC.star}</span>` : ""}${o.length ? tkMini(o) : ""}</div>
     <div class="t">${esc(m.nm)}</div>
     ${r && !m.unreleased ? r : `<div class="s">${esc(sub)}</div>${r}`}
   </button>`;
@@ -400,15 +423,11 @@ function match(m){
   const hay = [m.nm, m.enm, m.dir, m.star, m.cat].join(" ").toLowerCase();
   return S.q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
-function pickHero(list){
-  const soon = list.filter(m => m.rt && m.rt.length === 10);
-  const score = m => (isFav(m) ? 1e9 : 0) + (openedAt(m).length ? 1e8 : 0) + m.wish.maoyan - (daysTo(m.rt) || 0) * 2000;
-  return soon.filter(m => daysTo(m.rt) <= 21).sort((a,b) => score(b) - score(a))[0];
-}
 function heroBlock(m){
   const n = daysTo(m.rt), o = openedAt(m);
-  const why = isFav(m) ? "你星标的电影" : o.length ? "已在你的影院开票" : "最受期待";
-  const when = n === 0 ? `今天上映` : `<b>${n}</b>天后上映，${mdc(m.rt)} ${wk(m.rt)}`;
+  const why = `${IC.star}星标`;
+  const when = !(m.rt && m.rt.length === 10) ? (m.rt ? `${m.rt.length === 7 ? +m.rt.slice(5) + "月" : m.rt + "年"}上映，具体日期待定` : "上映日期待定")
+    : n === 0 ? `今天上映` : `<b>${n}</b>天后上映，${mdc(m.rt)} ${wk(m.rt)}`;
   return `<section class="hero"><div class="hero-bg" style="background-image:url('${esc(m.img)}')"></div>
     <button class="hero-in" data-id="${m.id}">
       <img class="hero-poster" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer">
@@ -425,21 +444,21 @@ function comingView(){
   const all = S.data.movies.filter(m => m.unreleased);
   if (S.q) { const hits = all.filter(match).sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)));
     return hits.length ? `<div class="rows" style="margin-top:6px">${hits.map(row).join("")}</div>` : `<p class="empty">没有找到"${esc(S.q)}"。</p>`; }
-  const hero = pickHero(all);
-  let h = hero ? heroBlock(hero) : "";
-  const favs = all.filter(m => isFav(m) && m !== hero);
-  if (favs.length) h += `<div class="sec"><h3>星标</h3></div><div class="hscroll">${favs.sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt))).map(m => card(m, {sub: m.rt && m.rt.length === 10 ? `${md(m.rt)} 上映` : "日期待定"})).join("")}</div>`;
+  const favs = all.filter(isFav).sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)));
+  let h = favs.length
+    ? `<div class="heroes" id="heroes">${favs.map(heroBlock).join("")}</div>` + (favs.length > 1 ? `<div class="hero-dots" id="dots">${favs.map((_, i) => `<i${i ? "" : ` class="on"`}></i>`).join("")}</div>` : "")
+    : `<div class="hero-empty"><span class="ic">${IC.star}</span><div><b>星标你想看的电影</b><span>点开任意一部，点右上角"星标"。它会出现在这里，开票和开分都会推送给你。</span></div></div>`;
   // 近 21 天：按天分组，大海报
   const byDay = {};
-  all.filter(m => m.rt && m.rt.length === 10 && daysTo(m.rt) <= 21 && m !== hero).forEach(m => (byDay[m.rt] = byDay[m.rt] || []).push(m));
+  all.filter(m => m.rt && m.rt.length === 10 && daysTo(m.rt) <= 21).forEach(m => (byDay[m.rt] = byDay[m.rt] || []).push(m));
   Object.keys(byDay).sort().forEach(d => {
     const ms = byDay[d].sort((a,b) => (isFav(b) - isFav(a)) || (openedAt(b).length - openedAt(a).length) || b.wish.maoyan - a.wish.maoyan);
     const n = daysTo(d), r = relWord(n);
     h += `<div class="day"><span class="d">${md(d)}</span><span class="w">${wk(d)}</span>${r ? `<span class="rel">${r}</span>` : ""}</div>
-      <div class="hscroll">${ms.map(m => card(m, {lg: n <= 7})).join("")}</div>`;
+      <div class="hscroll">${ms.map(m => card(m)).join("")}</div>`;
   });
   // 更远的：按月，紧凑行
-  const later = all.filter(m => !(m.rt && m.rt.length === 10 && daysTo(m.rt) <= 21) && m !== hero)
+  const later = all.filter(m => !(m.rt && m.rt.length === 10 && daysTo(m.rt) <= 21))
     .sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)) || b.wish.maoyan - a.wish.maoyan);
   let cur = "", shown = 0, buf = "";
   const flush = () => { if (buf) h += `<div class="rows">${buf}</div>`; buf = ""; };
@@ -511,6 +530,11 @@ function render(){
   $("#sub").textContent = `${S.data.city || ""}  ${ago(S.data.updated)}更新`;
   $("#main").innerHTML = (S.q && S.tab !== "feed" ? searchView() : ({coming: comingView, now: nowView, opened: openedView, feed: feedView})[S.tab]()) + foot();
   const more = $("#more"); if (more) more.onclick = () => { S.limit += 60; render(); };
+  const hs = $("#heroes"), dots = $("#dots");
+  if (hs && dots) hs.addEventListener("scroll", () => {
+    const i = Math.round(hs.scrollLeft / (hs.firstElementChild.offsetWidth + 10));
+    dots.querySelectorAll("i").forEach((d, k) => d.classList.toggle("on", k === i));
+  }, {passive: true});
 }
 
 /* ---------- 详情 ---------- */

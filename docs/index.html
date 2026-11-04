@@ -159,6 +159,34 @@ main{padding:0 14px}
 .links{display:flex;gap:8px;flex-wrap:wrap}
 .links a{background:var(--seat);border-radius:10px;padding:9px 14px;font-size:14px;text-decoration:none}
 .tip{color:var(--faint);font-size:12px;margin:24px 18px calc(30px + var(--safe-b))}
+
+/* ---------- 设置 ---------- */
+.set h2{font-size:22px;margin:4px 18px 4px}
+.set .lead{color:var(--dim);font-size:14px;margin:0 18px 6px}
+.set .block p{color:var(--dim);font-size:14px;margin:0 0 8px}
+.state{display:inline-block;font-size:13px;border-radius:6px;padding:1px 8px;background:var(--seat);color:var(--dim)}
+.state.ok{background:rgba(127,214,166,.15);color:var(--up)}
+.steps{margin:0 0 10px;padding-left:20px;color:#d4cce0;font-size:14px;line-height:1.7}
+.steps code{background:var(--seat);border-radius:4px;padding:0 4px;font-size:13px}
+.field{display:flex;gap:8px}
+.field input{flex:1;min-width:0;background:var(--seat);border:1px solid var(--seat-2);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px}
+.btn{background:var(--amber);color:var(--amber-ink);font-weight:600;border-radius:10px;padding:10px 16px;white-space:nowrap}
+.btn.ghost{background:var(--seat);color:var(--ink);font-weight:400}
+.btn:disabled{opacity:.5}
+.choice{display:flex;gap:10px;align-items:flex-start;background:var(--seat);border-radius:10px;padding:10px 12px;margin-bottom:8px;width:100%;text-align:left}
+.choice input{accent-color:var(--amber);margin-top:4px}
+.choice small{display:block;color:var(--dim);font-size:13px}
+.starlist{display:grid;gap:6px}
+.starlist div{display:flex;justify-content:space-between;align-items:center;background:var(--seat);border-radius:10px;padding:8px 12px}
+.starlist button{color:var(--dim);font-size:13px;padding:4px 0 4px 10px}
+.err{color:var(--warn);font-size:13px;margin-top:6px}
+.toast{position:fixed;left:14px;right:14px;bottom:calc(76px + var(--safe-b));z-index:20;background:var(--ink);color:var(--night);
+  border-radius:12px;padding:12px 14px;font-size:14px;display:flex;gap:12px;align-items:center;
+  transform:translateY(20px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.toast.on{opacity:1;transform:none;pointer-events:auto}
+.toast span{flex:1}
+.toast button{font-weight:700;color:#7a4f00;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
@@ -167,6 +195,7 @@ main{padding:0 14px}
     <div class="city" id="city">电影雷达</div>
     <div class="updated" id="updated">加载中…</div>
     <button class="refresh" id="refresh" aria-label="刷新数据">刷新</button>
+    <button class="refresh" id="openSettings">设置</button>
   </div>
   <div class="search">
     <input id="q" type="search" placeholder="搜片名、导演、演员" autocomplete="off" enterkeyhint="search">
@@ -188,15 +217,17 @@ main{padding:0 14px}
 </nav>
 
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="电影详情"></section>
+<section class="sheet set" id="settings" role="dialog" aria-modal="true" aria-label="推送设置"></section>
+<div class="toast" id="toast" role="status" aria-live="polite"><span></span><button hidden></button></div>
 
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const WK = "日一二三四五六";
-const S = { tab: "coming", q: "", onlyOpen: false, limit: 40, data: null, hist: {}, events: [], status: {}, favs: loadFavs() };
-
-function loadFavs(){ try { return new Set(JSON.parse(localStorage.getItem("radar.favs") || "[]")); } catch { return new Set(); } }
-function saveFavs(){ try { localStorage.setItem("radar.favs", JSON.stringify([...S.favs])); } catch {} }
+const S = { tab: "coming", q: "", onlyOpen: false, limit: 40, data: null, hist: {}, events: [], status: {},
+  local: new Set(getPref("favs", []).map(String)),   // 没连 GitHub 时只存在这台手机上的星标
+  watch: null,                                       // 从仓库 watch.json 读到的 {stars, ticketing}
+  sha: null };
 function getPref(k, d){ try { const v = localStorage.getItem("radar." + k); return v === null ? d : JSON.parse(v); } catch { return d; } }
 function setPref(k, v){ try { localStorage.setItem("radar." + k, JSON.stringify(v)); } catch {} }
 
@@ -222,7 +253,12 @@ function ago(iso){
   return Math.round(h/24) + " 天前";
 }
 function hm(iso){ return new Date(iso).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}); }
-const isFav = m => S.favs.has(String(m.id)) || m.watch;
+function starIds(){
+  if (S.watch) return new Set(S.watch.stars.map(x => String(x.id)));
+  return new Set([...(S.data && S.data.stars || []).map(String), ...S.local]);
+}
+// 连上 GitHub 后以仓库里的星标为准；否则用上次抓取的结果 + 这台手机上的星标
+const isFav = m => S.watch ? starIds().has(String(m.id)) : (starIds().has(String(m.id)) || m.watch);
 const isOpen = m => Object.keys(m.opened || {}).length > 0;
 
 /* 三个评分 */
@@ -252,6 +288,7 @@ function apply(d){
   if (unread) $("#feedBadge").dataset.n = unread > 9 ? "9+" : unread; else delete $("#feedBadge").dataset.n;
   render();
   const m = location.hash.match(/^#m(\d+)/); if (m) openMovie(m[1], false);
+  if (gh.token() && !S.watch) syncStars();
 }
 
 /* ---------- 渲染 ---------- */
@@ -295,7 +332,7 @@ function comingView(){
     .sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)) || b.wish.maoyan - a.wish.maoyan);
   if (!list.length) return `<p class="empty">${S.q || S.onlyOpen ? "没有符合条件的电影。" : "这里暂时没有电影。"}</p>`;
   const favs = list.filter(isFav), rest = list.filter(m => !isFav(m));
-  let h = favs.length ? `<div class="section-title">我关注的</div>` + favs.map(m => row(m)).join("") : "";
+  let h = favs.length ? `<div class="section-title">星标</div>` + favs.map(m => row(m)).join("") : "";
   let cur = "";
   for (const m of rest.slice(0, S.limit)) {
     const r = m.rt || "";
@@ -385,7 +422,7 @@ function openMovie(id, push = true){
   const tmNote = t ? (t.critics != null ? "专业" + (t.audience != null ? ` · 观众 ${t.audience}%` : "") : "还没开分") : "未收录";
   $("#sheet").innerHTML = `
     <div class="sheet-bar"><button id="close">返回</button>
-      <button class="fav" id="fav" aria-pressed="${fav}">${fav ? "已关注" : "关注"}</button></div>
+      <button class="fav" id="fav" aria-pressed="${fav}">${fav ? "★ 已星标" : "☆ 星标"}</button></div>
     <div class="hero"><img src="${esc(m.img)}" alt="" referrerpolicy="no-referrer">
       <div><h1>${esc(m.nm)}</h1>${m.enm ? `<div class="en">${esc(m.enm)}</div>` : ""}
       <div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join("")}</div></div></div>
@@ -409,19 +446,178 @@ function openMovie(id, push = true){
       ${t ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">烂番茄</a>` : ""}
       ${m.video ? `<a href="${esc(m.video)}" target="_blank" rel="noopener">预告片</a>` : ""}
     </div></div>
-    <p class="tip">"关注"会把这部片放到列表最上面，只在这台手机上生效。想让它开分时也推送，把片名加到仓库 config.json 的 watch 里。</p>`;
+    <p class="tip">星标后，这部片在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送给你。</p>`;
   const sh = $("#sheet"); sh.scrollTop = 0; sh.classList.add("on"); document.body.style.overflow = "hidden";
   if (push) history.pushState({m: m.id}, "", "#m" + m.id);
   $("#close").onclick = () => history.state && history.state.m ? history.back() : closeMovie();
-  $("#fav").onclick = e => {
-    const k = String(m.id); S.favs.has(k) ? S.favs.delete(k) : S.favs.add(k); saveFavs();
-    const on = isFav(m); e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.textContent = on ? "已关注" : "关注"; render();
-  };
+  $("#fav").onclick = () => toggleStar(m);
   $("#close").focus({preventScroll:true});
 }
 function closeMovie(){ $("#sheet").classList.remove("on"); document.body.style.overflow = ""; if (location.hash) history.replaceState(null, "", location.pathname + location.search); }
 window.addEventListener("popstate", () => { const m = location.hash.match(/^#m(\d+)/); m ? openMovie(m[1], false) : closeMovie(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").classList.contains("on")) $("#close").click(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if ($("#settings").classList.contains("on")) closeSettings(); else if ($("#sheet").classList.contains("on")) $("#close").click();
+});
+
+/* ---------- 星标：存到仓库的 watch.json，后台据此推送 ---------- */
+const gh = {
+  token: () => getPref("ghToken", ""),
+  repo(){
+    const saved = getPref("ghRepo", "");
+    if (saved) return saved;
+    const h = location.hostname;
+    if (!h.endsWith(".github.io")) return "";
+    const owner = h.split(".")[0], first = location.pathname.split("/").filter(Boolean)[0];
+    return `${owner}/${first || h}`;
+  },
+  async call(method, path, body){
+    const r = await fetch(`https://api.github.com/repos/${gh.repo()}${path}`, {
+      method, headers: {Authorization: `Bearer ${gh.token()}`, Accept: "application/vnd.github+json"},
+      body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 401) throw new Error("密钥无效或已过期，请到设置里重新填写");
+    if (r.status === 403) throw new Error("密钥没有写入权限：Contents 需要选 Read and write");
+    if (r.status === 404 && method !== "GET") throw new Error("找不到仓库，检查设置里的仓库名");
+    return r;
+  },
+};
+const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
+
+async function readWatch(){
+  const r = await gh.call("GET", `/contents/watch.json?t=${Date.now()}`);
+  if (r.status === 404) return {data: {stars: [], ticketing: "all"}, sha: null};
+  if (!r.ok) throw new Error(`读取星标失败（HTTP ${r.status}）`);
+  const j = await r.json();
+  let data; try { data = JSON.parse(b64d(j.content)); } catch { data = {}; }
+  data.stars = Array.isArray(data.stars) ? data.stars.filter(x => x && x.id) : [];
+  data.ticketing = data.ticketing === "starred" ? "starred" : "all";
+  return {data, sha: j.sha};
+}
+async function writeWatch(mutate, message){
+  for (let i = 0; i < 3; i++) {
+    const {data, sha} = await readWatch();
+    mutate(data);
+    const r = await gh.call("PUT", "/contents/watch.json", {message, sha: sha || undefined,
+      content: b64e(JSON.stringify(data, null, 1) + "\n")});
+    if (r.ok) { S.watch = data; S.sha = (await r.json()).content.sha; return; }
+    if (r.status !== 409 && r.status !== 422) throw new Error(`保存失败（HTTP ${r.status}）`);
+  }
+  throw new Error("保存冲突，请稍后再试");
+}
+async function syncStars(){
+  try {
+    const {data, sha} = await readWatch(); S.watch = data; S.sha = sha;
+    if (S.local.size) {   // 连接前在手机上点过的星标，一并传上去
+      const extra = [...S.local].filter(id => !data.stars.some(x => String(x.id) === id));
+      if (extra.length) await writeWatch(d => extra.forEach(id => {
+        const m = S.data.movies.find(x => String(x.id) === id);
+        if (!d.stars.some(x => String(x.id) === id)) d.stars.push({id: +id, nm: m ? m.nm : "", at: new Date().toISOString()});
+      }), `星标 ${extra.length} 部电影`);
+      S.local.clear(); setPref("favs", []);
+    }
+    render(); if ($("#settings").classList.contains("on")) renderSettings();
+  } catch (e) { toast(e.message); }
+}
+async function toggleStar(m){
+  const id = String(m.id), on = !isFav(m);
+  const btn = $("#fav");
+  const paint = v => { if (btn) { btn.setAttribute("aria-pressed", v); btn.textContent = v ? "★ 已星标" : "☆ 星标"; } };
+  if (!gh.token()) {
+    if (!on && !S.local.has(id)) { toast("这颗星保存在 GitHub 上，先在设置里连接 GitHub 才能取消。", "去设置", openSettings); return; }
+    on ? S.local.add(id) : S.local.delete(id); setPref("favs", [...S.local]);
+    paint(on); render();
+    if (on) toast("已在这台手机上星标。要收到推送，先在设置里连接 GitHub。", "去设置", openSettings);
+    return;
+  }
+  paint(on);
+  try {
+    await writeWatch(d => {
+      d.stars = d.stars.filter(x => String(x.id) !== id);
+      if (on) d.stars.push({id: m.id, nm: m.nm, at: new Date().toISOString()});
+    }, `${on ? "星标" : "取消星标"}《${m.nm}》`);
+    render();
+    toast(on ? `已星标《${m.nm}》，开票和开分都会推送给你` : `已取消星标《${m.nm}》`);
+  } catch (e) { paint(!on); toast(e.message); }
+}
+
+let toastTimer;
+function toast(msg, action, fn){
+  const t = $("#toast"); t.querySelector("span").textContent = msg;
+  const b = t.querySelector("button"); b.hidden = !action; b.textContent = action || ""; b.onclick = () => { t.classList.remove("on"); fn && fn(); };
+  t.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), action ? 6000 : 3500);
+}
+
+function renderSettings(){
+  const tok = gh.token(), repo = gh.repo();
+  const w = S.watch || {stars: (S.data ? S.data.stars : []).map(id => ({id})), ticketing: S.data ? S.data.ticketing : "all"};
+  const byId = Object.fromEntries((S.data ? S.data.movies : []).map(m => [String(m.id), m]));
+  const stars = tok ? w.stars : [...starIds()].map(id => ({id}));
+  const repoNew = repo ? `https://github.com/settings/personal-access-tokens/new` : "https://github.com/settings/personal-access-tokens/new";
+  $("#settings").innerHTML = `
+    <div class="sheet-bar"><button id="closeSet">完成</button></div>
+    <h2>推送设置</h2>
+    <p class="lead">星标一部电影后，它在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送到手机。</p>
+    <div class="block"><h3>连接 GitHub <span class="state ${tok ? "ok" : ""}">${tok ? "已连接" : "未连接"}</span></h3>
+      ${tok ? `<p>星标会保存到仓库 ${esc(repo)} 的 watch.json，改动 1～2 分钟后生效。</p>
+        <button class="btn ghost" id="logout">断开连接</button>` : `
+      <p>需要一个只能改这个仓库的 GitHub 密钥，填一次就行。</p>
+      <ol class="steps">
+        <li>用 Safari 打开 <a href="${repoNew}" target="_blank" rel="noopener">GitHub 新建密钥页面</a></li>
+        <li>Token name 随便填，Expiration 选最长</li>
+        <li>Repository access 选 <code>Only select repositories</code>，选 <code>${esc(repo.split("/")[1] || "你的仓库")}</code></li>
+        <li>Permissions 里找到 <code>Contents</code>，选 <code>Read and write</code></li>
+        <li>点 Generate token，复制生成的密钥，粘贴到下面</li>
+      </ol>
+      <div class="field"><input id="tok" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn" id="saveTok">连接</button></div>
+      ${repo ? "" : `<div class="field" style="margin-top:8px"><input id="repo" placeholder="用户名/仓库名" autocapitalize="off" spellcheck="false"></div>`}
+      <div class="err" id="tokErr" hidden></div>
+      <p style="margin-top:10px;font-size:12px;color:var(--faint)">密钥只保存在这台手机的浏览器里。添加到主屏幕的网页和 Safari 里的是分开的，在哪个里面用就在哪个里面填。</p>`}
+    </div>
+    <div class="block"><h3>开票提醒</h3>
+      <label class="choice"><input type="radio" name="tm" value="all" ${w.ticketing !== "starred" ? "checked" : ""} ${tok ? "" : "disabled"}>
+        <span>所有未上映的新片<small>你的影院有新片第一次开票就推送，星标的会加 ⭐</small></span></label>
+      <label class="choice"><input type="radio" name="tm" value="starred" ${w.ticketing === "starred" ? "checked" : ""} ${tok ? "" : "disabled"}>
+        <span>只推送星标的电影<small>其他片子开票只在"已开票"里显示，不推送</small></span></label>
+    </div>
+    <div class="block"><h3>星标的电影（${stars.length}）</h3>
+      ${stars.length ? `<div class="starlist">${stars.map(x => { const m = byId[String(x.id)];
+        return `<div><span>${esc(m ? m.nm : x.nm || x.id)}</span><button data-unstar="${x.id}">取消星标</button></div>`; }).join("")}</div>`
+        : `<p>还没有星标。打开任意一部电影，点右上角的"☆ 星标"。</p>`}
+      ${!tok && stars.length ? `<p style="margin-top:8px">这些星标只在这台手机上，连接 GitHub 后会自动上传。</p>` : ""}
+    </div>
+    <p class="tip"></p>`;
+  $("#closeSet").onclick = closeSettings;
+  const save = $("#saveTok");
+  if (save) save.onclick = async () => {
+    const v = $("#tok").value.trim(), err = $("#tokErr");
+    if ($("#repo")) setPref("ghRepo", $("#repo").value.trim());
+    if (!v) { err.hidden = false; err.textContent = "先粘贴密钥。"; return; }
+    if (!gh.repo()) { err.hidden = false; err.textContent = "填一下仓库名，例如 yourname/movie-radar。"; return; }
+    save.disabled = true; save.textContent = "连接中…"; setPref("ghToken", v);
+    try {
+      const r = await gh.call("GET", "");
+      if (!r.ok) throw new Error(r.status === 404 ? "找不到仓库：确认密钥里选了这个仓库" : `连接失败（HTTP ${r.status}）`);
+      const info = await r.json();
+      if (info.permissions && info.permissions.push === false) throw new Error("密钥没有写入权限：Contents 需要选 Read and write");
+      await syncStars(); renderSettings(); toast("已连接 GitHub");
+    } catch (e) { setPref("ghToken", ""); save.disabled = false; save.textContent = "连接"; err.hidden = false; err.textContent = e.message; }
+  };
+  const out = $("#logout"); if (out) out.onclick = () => { setPref("ghToken", ""); S.watch = null; renderSettings(); render(); };
+  $("#settings").querySelectorAll("input[name=tm]").forEach(r => r.onchange = async () => {
+    try { await writeWatch(d => d.ticketing = r.value, r.value === "starred" ? "开票提醒：只推送星标" : "开票提醒：所有新片");
+      toast(r.value === "starred" ? "以后只推送星标电影的开票" : "以后所有新片开票都会推送"); }
+    catch (e) { toast(e.message); renderSettings(); }
+  });
+  $("#settings").querySelectorAll("[data-unstar]").forEach(b => b.onclick = async () => {
+    const m = byId[b.dataset.unstar] || {id: +b.dataset.unstar, nm: ""};
+    await toggleStar(m); renderSettings();
+  });
+}
+function openSettings(){ closeMovie(); renderSettings(); $("#settings").classList.add("on"); document.body.style.overflow = "hidden"; }
+function closeSettings(){ $("#settings").classList.remove("on"); document.body.style.overflow = ""; }
+$("#openSettings").onclick = openSettings;
 
 /* ---------- 交互 ---------- */
 $("#main").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) openMovie(b.dataset.id); });

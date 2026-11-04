@@ -86,10 +86,24 @@ def site_url(cfg):
     return None
 
 
+def load_watch():
+    """网页上点的星标存在仓库根目录的 watch.json 里。"""
+    w = load_json(ROOT / "watch.json", {}) or {}
+    stars = {}
+    for x in w.get("stars") or []:
+        if isinstance(x, dict) and x.get("id"):
+            stars[str(x["id"])] = x.get("nm") or ""
+        elif isinstance(x, (int, str)) and str(x).isdigit():
+            stars[str(x)] = ""
+    mode = w.get("ticketing") if w.get("ticketing") in ("all", "starred") else "all"
+    return stars, mode
+
+
 class Radar:
     def __init__(self, cfg, args):
         self.cfg = cfg
         self.args = args
+        self.stars, self.ticket_mode = load_watch()
         self.state = load_json(STATE_FILE, {})
         st = self.state
         for k, v in {"version": 2, "bootstrapped": False, "last": {}, "movies": {}, "detail_at": {},
@@ -117,6 +131,8 @@ class Radar:
         print(f"[{'OK' if ok else '失败'}] {src} {msg}")
 
     def watched(self, mid, nm):
+        if str(mid) in self.stars:
+            return True
         for w in self.cfg.get("watch") or []:
             w = str(w).strip()
             if not w:
@@ -271,6 +287,8 @@ class Radar:
             self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
             if new and self.cfg["notify"].get("new_ticketing", True):
                 for mid, m, o in new:
+                    if self.ticket_mode == "starred" and not self.watched(mid, m["nm"]):
+                        continue
                     rt = (self.state["movies"].get(mid) or {}).get("rt")
                     body = f"《{m['nm']}》首场 {md(o['first'])}"
                     if rt and len(rt) == 10 and o["first"] != rt:
@@ -471,7 +489,7 @@ class Radar:
         }
 
     def check_scores(self):
-        mode = self.cfg["notify"].get("score_open", "opened")
+        mode = self.cfg["notify"].get("score_open", "watch")
         scored = self.state["scored"]
         st = self.state
         for mid, r in self.live():
@@ -560,7 +578,8 @@ class Radar:
 
         st["events"] = (self.events + st["events"])[:150]
         save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"],
-                                        "cinemas": cinemas, "movies": movies})
+                                        "cinemas": cinemas, "movies": movies,
+                                        "stars": list(self.stars), "ticketing": self.ticket_mode})
         save_json(OUT / "history.json", history)
         save_json(OUT / "events.json", st["events"][:100])
         save_json(OUT / "status.json", {"updated": NOW_S, "sources": self.status}, pretty=True)

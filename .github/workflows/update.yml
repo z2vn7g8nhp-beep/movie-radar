@@ -3,7 +3,7 @@ name: 更新电影数据
 on:
   push:
     branches: [main]
-    paths: ["config.json", "scraper/**", "docs/**", ".github/workflows/**"]
+    paths: ["config.json", "watch.json", "scraper/**", "docs/**", ".github/workflows/**"]
   schedule:
     - cron: "*/10 * * * *"   # 每 10 分钟（GitHub 高峰期可能会晚一些）
   workflow_dispatch:

@@ -1,0 +1,32 @@
+{
+  "city": {
+    "name": "西安",
+    "maoyan_ci": 42,
+    "tpp_citycode": "610100"
+  },
+  "cinemas": [
+    {
+      "id": 39869,
+      "short": "荟聚寰映",
+      "name": "寰映影城（西安荟聚激光IMAX店）"
+    },
+    {
+      "id": 25769,
+      "short": "UME MOMOPARK",
+      "name": "UME影城（MOMOPARK激光IMAX店）"
+    }
+  ],
+  "watch": [],
+  "notify": {
+    "new_ticketing": true,
+    "new_dates_for_watched": true,
+    "score_open": "my_cinemas",
+    "new_coming_movies": false
+  },
+  "imdb_overrides": {},
+  "intervals_minutes": {
+    "lists": 25,
+    "tpp": 25,
+    "imdb": 180
+  }
+}

@@ -1,0 +1,100 @@
+name: 更新电影数据
+
+on:
+  push:
+    branches: [main]
+    paths: ["config.json", "scraper/**", "docs/**", ".github/workflows/**"]
+  schedule:
+    - cron: "*/10 * * * *"   # 每 10 分钟（GitHub 高峰期可能会晚一些）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "运行方式"
+        type: choice
+        default: normal
+        options:
+          - normal      # 正常抓取
+          - force       # 忽略间隔，全部重抓
+          - test-push   # 只发一条测试推送到手机
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: movie-radar
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 取回上一次的数据
+        run: |
+          if git fetch --depth=1 origin radar-data 2>/dev/null; then
+            mkdir -p _store && git archive FETCH_HEAD | tar -x -C _store
+            mkdir -p state docs/data
+            cp -r _store/state/. state/ 2>/dev/null || true
+            cp -r _store/data/. docs/data/ 2>/dev/null || true
+            rm -rf _store
+          else
+            echo "第一次运行，没有历史数据"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 测试推送
+        if: inputs.mode == 'test-push'
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+        run: python scraper/run.py --test-push
+
+      - name: 抓取数据
+        if: inputs.mode != 'test-push'
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          BARK_SERVER: ${{ vars.BARK_SERVER }}
+        run: python scraper/run.py ${{ inputs.mode == 'force' && '--force' || '' }}
+
+      - name: 保存数据（覆盖式，不让仓库越来越大）
+        if: inputs.mode != 'test-push'
+        run: |
+          rm -rf /tmp/store && mkdir -p /tmp/store/state /tmp/store/data
+          cp -r state/. /tmp/store/state/
+          cp -r docs/data/. /tmp/store/data/
+          cd /tmp/store
+          git init -q -b radar-data
+          git config user.name "movie-radar-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "数据 $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" radar-data
+
+      - name: 防止 GitHub 60 天后自动停用定时任务
+        if: inputs.mode != 'test-push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable" || true
+
+      - uses: actions/configure-pages@v5
+        if: inputs.mode != 'test-push'
+      - uses: actions/upload-pages-artifact@v3
+        if: inputs.mode != 'test-push'
+        with:
+          path: docs
+      - id: deploy
+        if: inputs.mode != 'test-push'
+        uses: actions/deploy-pages@v4

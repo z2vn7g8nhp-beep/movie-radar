@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d1828">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="电影雷达">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>电影雷达</title>
+<style>
+:root{
+  --night:#1d1828;      /* 放映厅 */
+  --seat:#2a2338;       /* 座椅 */
+  --seat-2:#352d46;
+  --ink:#efe9f4;
+  --dim:#a197b3;
+  --faint:#6f6582;
+  --amber:#f4b740;      /* 开票 */
+  --amber-ink:#2b1d00;
+  --stub:#d9ece6;       /* 票根纸 */
+  --up:#7fd6a6;
+  --warn:#ff8a7a;
+  --num:"DIN Condensed","DINCondensed-Bold","Avenir Next Condensed","Arial Narrow",sans-serif;
+  --sans:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--night);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+body{padding-bottom:calc(72px + var(--safe-b))}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
+img{display:block}
+
+/* ---------- 顶部 ---------- */
+.top{position:sticky;top:0;z-index:5;background:linear-gradient(var(--night) 78%,rgba(29,24,40,0));
+  padding:calc(var(--safe-t) + 14px) 18px 10px}
+.top-row{display:flex;align-items:baseline;gap:10px}
+.city{font-size:26px;font-weight:700;letter-spacing:.02em}
+.updated{color:var(--dim);font-size:13px;flex:1}
+.refresh{color:var(--dim);font-size:13px;padding:6px 0 6px 10px}
+.search{margin-top:10px;display:flex;gap:8px}
+.search input{flex:1;min-width:0;background:var(--seat);border:1px solid transparent;color:var(--ink);
+  border-radius:10px;padding:9px 12px;font:inherit;font-size:15px}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{outline:none;border-color:var(--seat-2)}
+.toggle{white-space:nowrap;border-radius:10px;padding:0 12px;background:var(--seat);color:var(--dim);font-size:13px}
+.toggle[aria-pressed=true]{background:var(--amber);color:var(--amber-ink);font-weight:600}
+
+/* ---------- 底部标签 ---------- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:rgba(29,24,40,.94);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--seat);
+  padding:6px 4px calc(6px + var(--safe-b))}
+.tabs button{flex:1;padding:8px 0;font-size:13px;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button svg{width:22px;height:22px}
+.tabs button[aria-selected=true]{color:var(--ink)}
+.tabs button[aria-selected=true] svg{color:var(--amber)}
+.badge-dot{position:relative}
+.badge-dot[data-n]:after{content:attr(data-n);position:absolute;top:-4px;right:-12px;background:var(--amber);color:var(--amber-ink);
+  font-size:10px;font-weight:700;border-radius:8px;padding:0 5px;line-height:16px}
+
+/* ---------- 列表 ---------- */
+main{padding:0 14px}
+.section-title{font-size:13px;color:var(--dim);margin:18px 4px 8px}
+.movie{display:grid;grid-template-columns:78px 1fr;gap:12px;padding:12px 4px;border-bottom:1px solid var(--seat);
+  width:100%;text-align:left}
+.poster{width:78px;height:110px;border-radius:6px;object-fit:cover;background:var(--seat)}
+.mbody{min-width:0;display:flex;flex-direction:column;gap:5px}
+.mname{font-size:17px;font-weight:600;line-height:1.3;display:flex;gap:6px;align-items:flex-start}
+.mname .t{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.star-on{color:var(--amber);flex:none}
+.meta{color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scores{display:flex;gap:14px;align-items:baseline}
+.sc{display:flex;align-items:baseline;gap:4px;font-size:12px;color:var(--dim)}
+.sc b{font-family:var(--num);font-size:21px;font-weight:700;color:var(--ink);line-height:1;letter-spacing:.01em}
+.sc b.none{color:var(--faint);font-size:15px}
+.wish{font-size:12px;color:var(--dim)}
+.wish b{font-family:var(--num);font-size:16px;color:var(--ink);font-weight:700}
+.wish .d{color:var(--up)}
+
+/* 票根：开票就"亮"起来 */
+.stubs{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap}
+.stub{--notch:5px;position:relative;font-size:12px;line-height:1.25;padding:4px 10px 4px 9px;border-radius:3px;
+  border:1px dashed var(--seat-2);color:var(--faint);
+  -webkit-mask:radial-gradient(circle var(--notch) at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,
+         radial-gradient(circle var(--notch) at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat;
+          mask:radial-gradient(circle var(--notch) at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,
+         radial-gradient(circle var(--notch) at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat}
+.stub .cn{font-weight:600}
+.stub.open{background:var(--amber);color:var(--amber-ink);border:1px solid var(--amber)}
+.stub.open .when{font-family:var(--num);font-size:14px;font-weight:700;margin-left:4px;letter-spacing:.02em}
+.stub.fresh{animation:glow 2.4s ease-in-out 1}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(244,183,64,0)}40%{box-shadow:0 0 0 6px rgba(244,183,64,.25)}}
+@media (prefers-reduced-motion:reduce){.stub.fresh{animation:none}}
+
+.empty{color:var(--dim);text-align:center;padding:48px 20px}
+.more{display:block;margin:16px auto;color:var(--dim);font-size:14px;padding:10px 18px;border-radius:10px;background:var(--seat)}
+
+/* 我的影院 */
+.cinema{margin:14px 0 22px}
+.cinema h2{font-size:19px;margin:0 4px 2px}
+.cinema .addr{color:var(--dim);font-size:13px;margin:0 4px 6px}
+.newtag{display:inline-block;font-size:11px;font-weight:700;background:var(--amber);color:var(--amber-ink);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:2px}
+
+/* 动态 */
+.ev{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:12px 4px;border-bottom:1px solid var(--seat);width:100%;text-align:left}
+.ev time{grid-row:span 2;font-family:var(--num);font-size:15px;color:var(--dim);padding-top:2px;min-width:54px}
+.ev .tt{font-weight:600}
+.ev .bd{color:var(--dim);font-size:14px;white-space:pre-line}
+
+/* 数据来源状态 */
+.status{margin:26px 4px 10px;font-size:12px;color:var(--faint)}
+.status li{list-style:none;display:flex;gap:6px;align-items:center;margin:3px 0}
+.status ul{padding:0;margin:6px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--up);flex:none}
+.dot.bad{background:var(--warn)}
+
+/* ---------- 详情 ---------- */
+.sheet{position:fixed;inset:0;z-index:10;background:var(--night);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.sheet.on{transform:none;visibility:visible}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+.sheet-bar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;
+  padding:calc(var(--safe-t) + 10px) 14px 10px;background:linear-gradient(var(--night) 70%,rgba(29,24,40,0));z-index:2}
+.sheet-bar button{background:var(--seat);border-radius:18px;padding:6px 14px;font-size:14px}
+.sheet-bar .fav[aria-pressed=true]{background:var(--amber);color:var(--amber-ink);font-weight:600}
+.hero{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:4px 18px 8px}
+.hero img{width:120px;height:168px;border-radius:8px;object-fit:cover;background:var(--seat)}
+.hero h1{font-size:23px;line-height:1.25;margin:2px 0 4px}
+.hero .en{color:var(--dim);font-size:13px;margin-bottom:8px}
+.facts{font-size:13px;color:var(--dim);display:grid;gap:2px}
+.big-scores{display:grid;grid-template-columns:repeat(3,1fr);margin:14px 18px 6px;background:var(--seat);border-radius:12px}
+.big-scores a{padding:12px 8px;text-align:center;text-decoration:none}
+.big-scores a+a{border-left:1px solid var(--night)}
+.big-scores b{display:block;font-family:var(--num);font-size:34px;line-height:1.05;font-weight:700}
+.big-scores b.none{font-size:18px;color:var(--faint);line-height:1.9}
+.big-scores small{display:block;color:var(--dim);font-size:12px}
+.wish-panel{margin:10px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wish-panel div{background:var(--seat);border-radius:12px;padding:10px 12px}
+.wish-panel b{font-family:var(--num);font-size:24px;display:block;line-height:1.1}
+.wish-panel small{color:var(--dim);font-size:12px}
+.spark{margin:4px 18px 0;color:var(--dim);font-size:12px}
+.spark svg{width:100%;height:56px;display:block}
+.block{margin:18px 18px}
+.block h3{font-size:15px;margin:0 0 8px;color:var(--ink)}
+.dra{color:#d4cce0;font-size:15px;line-height:1.75;margin:0}
+.dates{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.dates::-webkit-scrollbar{display:none}
+.dates button{flex:none;background:var(--seat);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--dim);text-align:center;line-height:1.25}
+.dates button b{display:block;font-family:var(--num);font-size:17px;color:var(--ink)}
+.dates button[aria-pressed=true]{background:var(--amber);color:var(--amber-ink)}
+.dates button[aria-pressed=true] b{color:var(--amber-ink)}
+.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:8px}
+.times div{background:var(--seat);border-radius:8px;padding:6px 8px;font-size:12px;color:var(--dim);line-height:1.35}
+.times b{display:block;font-family:var(--num);font-size:20px;color:var(--ink);font-weight:700}
+.no-show{color:var(--faint);font-size:14px}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.links a{background:var(--seat);border-radius:10px;padding:9px 14px;font-size:14px;text-decoration:none}
+.tip{color:var(--faint);font-size:12px;margin:24px 18px calc(30px + var(--safe-b))}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="city" id="city">电影雷达</div>
+    <div class="updated" id="updated">加载中…</div>
+    <button class="refresh" id="refresh" aria-label="刷新数据">刷新</button>
+  </div>
+  <div class="search">
+    <input id="q" type="search" placeholder="搜片名、导演、演员" autocomplete="off" enterkeyhint="search">
+    <button class="toggle" id="onlyMine" aria-pressed="false">只看我的影院</button>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="now" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M8 5v5M16 5v5"/></svg>热映</button>
+  <button role="tab" data-tab="coming" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>待映</button>
+  <button role="tab" data-tab="mine" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 0 0-4V4H3z" transform="translate(0 2)"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>我的影院</button>
+  <button role="tab" data-tab="feed" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge-dot" id="mineBadge">动态</span></button>
+</nav>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="电影详情"></section>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const WK = "日一二三四五六";
+const S = { tab: "now", q: "", onlyMine: false, limit: 40, data: null, sched: {}, hist: {}, events: [], status: {}, favs: loadFavs() };
+
+function loadFavs(){ try { return new Set(JSON.parse(localStorage.getItem("radar.favs") || "[]")); } catch { return new Set(); } }
+function saveFavs(){ try { localStorage.setItem("radar.favs", JSON.stringify([...S.favs])); } catch {} }
+function getPref(k, d){ try { const v = localStorage.getItem("radar." + k); return v === null ? d : JSON.parse(v); } catch { return d; } }
+function setPref(k, v){ try { localStorage.setItem("radar." + k, JSON.stringify(v)); } catch {} }
+
+function wan(n){ if (n == null) return "–"; if (n >= 1e8) return (n/1e8).toFixed(1).replace(/\.0$/,"") + "亿"; if (n >= 1e4) return (n/1e4).toFixed(1).replace(/\.0$/,"") + "万"; return String(n); }
+function signed(n){ return n == null || n === 0 ? "" : (n > 0 ? "+" : "") + wan(Math.abs(n)).replace(/^/, n < 0 ? "-" : ""); }
+/* 日期一律按北京时间的字符串处理，不受手机时区影响 */
+function ymd(d){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); return m ? [+m[1], +m[2], +m[3]] : null; }
+function md(d){ const x = ymd(d); return x ? `${x[1]}/${x[2]}` : (d || ""); }
+function wk(d){ const x = ymd(d); return x ? "周" + WK[new Date(Date.UTC(x[0], x[1]-1, x[2])).getUTCDay()] : ""; }
+function rel(d){
+  const x = ymd(d); if (!x) return d || "";
+  const t = ymd(new Date().toLocaleDateString("en-CA", {timeZone:"Asia/Shanghai"}));
+  const diff = Math.round((Date.UTC(x[0], x[1]-1, x[2]) - Date.UTC(t[0], t[1]-1, t[2])) / 864e5);
+  if (diff === 0) return "今天"; if (diff === 1) return "明天"; if (diff === 2) return "后天";
+  return `${x[1]}月${x[2]}日`;
+}
+/* 上映日期有三种精度：2026-11-06 / 2026-12 / 2026 */
+function rtKey(rt){ if (!rt) return "9999-99-99"; if (rt.length === 4) return rt + "-99-99"; if (rt.length === 7) return rt + "-99"; return rt; }
+function rtLabel(rt){ if (!rt) return "日期待定"; if (rt.length === 4) return rt + "年上映，日期待定"; if (rt.length === 7) return +rt.slice(5) + "月上映"; return rel(rt) + "上映"; }
+function ago(iso){
+  if (!iso) return ""; const m = Math.round((Date.now() - new Date(iso)) / 6e4);
+  if (m < 1) return "刚刚"; if (m < 60) return m + " 分钟前"; const h = Math.round(m/60); if (h < 24) return h + " 小时前";
+  return Math.round(h/24) + " 天前";
+}
+function hm(iso){ const d = new Date(iso); return d.toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}); }
+function score(v){ return v && v > 0 ? `<b>${v.toFixed(1)}</b>` : `<b class="none">暂无</b>`; }
+const isFav = m => S.favs.has(String(m.id)) || m.watch;
+
+/* ---------- 数据 ---------- */
+async function load(){
+  if (window.__RADAR__) { apply(window.__RADAR__); return; }
+  const t = Date.now();
+  const get = f => fetch(`data/${f}?t=${t}`, {cache:"no-store"}).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [movies, sched, hist, events, status] = await Promise.all(
+    ["movies.json","schedule.json","history.json","events.json","status.json"].map(get));
+  if (!movies) { $("#updated").textContent = "还没有数据"; $("#main").innerHTML =
+    `<p class="empty">数据还没生成。去 GitHub 仓库的 Actions 页面手动运行一次"更新电影数据"，几分钟后刷新这里。</p>`; return; }
+  apply({movies, sched, hist, events, status});
+}
+function apply(d){
+  S.data = d.movies; S.sched = (d.sched && d.sched.cinemas) || {}; S.hist = d.hist || {};
+  S.events = d.events || []; S.status = (d.status && d.status.sources) || {};
+  $("#city").textContent = S.data.city || "电影雷达";
+  $("#updated").textContent = "更新于 " + ago(S.data.updated);
+  const seenAt = getPref("feedSeen", "");
+  const unread = S.events.filter(e => e.at > seenAt && e.type !== "system").length;
+  if (unread) $("#mineBadge").dataset.n = unread > 9 ? "9+" : unread; else delete $("#mineBadge").dataset.n;
+  render();
+  const m = location.hash.match(/m=(\d+)/); if (m) openMovie(m[1], false);
+}
+
+/* ---------- 渲染 ---------- */
+function stubs(m, fresh){
+  return `<div class="stubs">` + S.data.cinemas.map(c => {
+    const h = m.cinemas[String(c.id)];
+    if (h && h.dates.length) {
+      const isNew = h.first && Date.now() - new Date(h.first) < 864e5 && fresh;
+      return `<span class="stub open${isNew ? " fresh" : ""}"><span class="cn">${esc(c.short)}</span><span class="when">${esc(md(h.dates[0]))}起</span></span>`;
+    }
+    return `<span class="stub"><span class="cn">${esc(c.short)}</span> 未开票</span>`;
+  }).join("") + `</div>`;
+}
+function row(m, opts = {}){
+  const meta = [m.status === "coming" ? rtLabel(m.rt) : (m.rt ? m.rt.slice(0,4) : ""), m.cat, m.dur ? m.dur + "分钟" : ""].filter(Boolean).join("  ");
+  const dm = m.delta && m.delta.maoyan;
+  return `<button class="movie" data-id="${m.id}">
+    <img class="poster" loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">
+    <div class="mbody">
+      <div class="mname"><span class="t">${esc(m.nm)}</span>${isFav(m) ? `<svg class="star-on" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-label="已关注"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z"/></svg>` : ""}</div>
+      <div class="meta">${esc(meta)}</div>
+      <div class="scores">
+        <span class="sc">猫眼 ${score(m.maoyan.sc)}</span>
+        <span class="sc">淘票票 ${score(m.tpp && m.tpp.sc)}</span>
+        <span class="sc">IMDb ${score(m.imdb && m.imdb.sc)}</span>
+      </div>
+      <div class="wish">想看  猫眼 <b>${wan(m.maoyan.wish)}</b>${dm ? ` <span class="d">${signed(dm)}</span>` : ""}${m.tpp ? `  淘票票 <b>${wan(m.tpp.wish)}</b>` : ""}</div>
+      ${stubs(m, opts.fresh !== false)}
+    </div></button>`;
+}
+function match(m){
+  if (S.onlyMine && !Object.keys(m.cinemas).length) return false;
+  if (!S.q) return true;
+  const hay = [m.nm, m.enm, m.dir, m.star, m.cat].join(" ").toLowerCase();
+  return S.q.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+function listView(status){
+  let list = S.data.movies.filter(m => m.status === status && match(m));
+  if (status === "coming") list.sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)) || b.maoyan.wish - a.maoyan.wish);
+  const favs = list.filter(isFav), rest = list.filter(m => !isFav(m));
+  if (!list.length) return `<p class="empty">${S.q ? "没有找到相关电影，换个关键词试试。" : "这里暂时没有电影。"}</p>`;
+  let h = "";
+  if (favs.length) h += `<div class="section-title">我关注的</div>` + favs.map(m => row(m)).join("");
+  if (status === "coming") {
+    let cur = "";
+    for (const m of rest.slice(0, S.limit)) {
+      const r = m.rt || "";
+      const k = r.length >= 7 ? r.slice(0,7) : (r ? r + "-待定" : "待定");
+      if (k !== cur) {
+        cur = k;
+        const thisYear = new Date().getFullYear();
+        const label = k === "待定" ? "上映日期待定"
+          : k.endsWith("待定") ? `${k.slice(0,4)}年上映，日期待定`
+          : (+k.slice(0,4) === thisYear ? "" : k.slice(0,4) + "年") + (+k.slice(5,7)) + "月上映";
+        h += `<div class="section-title">${label}</div>`;
+      }
+      h += row(m);
+    }
+  } else {
+    if (favs.length) h += `<div class="section-title">全部热映</div>`;
+    h += rest.slice(0, S.limit).map(m => row(m)).join("");
+  }
+  if (rest.length > S.limit) h += `<button class="more" id="more">再看 ${Math.min(40, rest.length - S.limit)} 部（共 ${rest.length} 部）</button>`;
+  return h;
+}
+function mineView(){
+  const byId = Object.fromEntries(S.data.movies.map(m => [String(m.id), m]));
+  return S.data.cinemas.map(c => {
+    const cid = String(c.id);
+    const ms = S.data.movies.filter(m => m.cinemas[cid] && match(m))
+      .sort((a,b) => (b.cinemas[cid].first || "").localeCompare(a.cinemas[cid].first || "") || (b.maoyan.wish - a.maoyan.wish));
+    const fresh = ms.filter(m => m.cinemas[cid].first && Date.now() - new Date(m.cinemas[cid].first) < 3*864e5);
+    const old = ms.filter(m => !fresh.includes(m));
+    const bad = S.status["cinema:" + cid] && !S.status["cinema:" + cid].ok;
+    return `<section class="cinema"><h2>${esc(c.name)}</h2>
+      <p class="addr">${esc(c.addr || "")}${c.at ? `  排片 ${ago(c.at)}更新` : ""}${bad ? `  <span style="color:var(--warn)">最近一次抓取失败</span>` : ""}</p>
+      ${fresh.length ? `<div class="section-title">最近 3 天新开票</div>` + fresh.map(m => row(m)).join("") : ""}
+      ${old.length ? `<div class="section-title">正在排片 ${old.length} 部</div>` + old.map(m => row(m, {fresh:false})).join("") : ""}
+      ${!ms.length ? `<p class="empty">${S.q || S.onlyMine ? "没有符合条件的电影。" : "暂时没有排片数据。"}</p>` : ""}
+    </section>`;
+  }).join("");
+}
+function feedView(){
+  setPref("feedSeen", S.events[0] ? S.events[0].at : ""); delete $("#mineBadge").dataset.n;
+  if (!S.events.length) return `<p class="empty">还没有动态。关注的影院一开票，这里和你的手机都会收到提醒。</p>`;
+  return S.events.map(e => `<button class="ev" ${e.mid ? `data-id="${e.mid}"` : ""}>
+    <time>${esc(hm(e.at).replace(" ", "\n"))}</time><span class="tt">${esc(e.title)}</span><span class="bd">${esc(e.body)}</span></button>`).join("");
+}
+function statusView(){
+  const names = {maoyan:"猫眼", tpp:"淘票票", imdb:"IMDb", details:"猫眼详情"};
+  S.data.cinemas.forEach(c => names["cinema:" + c.id] = c.short + " 排片");
+  const items = Object.entries(S.status).filter(([k]) => names[k]).map(([k, v]) =>
+    `<li><span class="dot${v.ok ? "" : " bad"}"></span>${names[k]}：${v.ok ? "正常" : esc(v.msg)}，${ago(v.ok ? v.at : v.last_ok) || "从未成功"}${v.ok ? "" : "成功过"}</li>`).join("");
+  return `<div class="status">数据来源<ul>${items}</ul>评分和想看人数每半小时左右更新，影院排片每 10 分钟左右检查一次。</div>`;
+}
+function render(){
+  if (!S.data) return;
+  const v = S.tab === "now" ? listView("now") : S.tab === "coming" ? listView("coming") : S.tab === "mine" ? mineView() : feedView();
+  $("#main").innerHTML = v + statusView();
+  $("#onlyMine").style.display = S.tab === "mine" || S.tab === "feed" ? "none" : "";
+  const more = $("#more"); if (more) more.onclick = () => { S.limit += 40; render(); };
+}
+
+/* ---------- 详情 ---------- */
+function spark(id){
+  const h = S.hist[id]; if (!h || h.length < 2) return "";
+  const W = 320, H = 50, xs = i => 4 + i * (W - 8) / (h.length - 1);
+  const line = (k, color) => {
+    const vals = h.map(p => p[k]); const mn = Math.min(...vals), mx = Math.max(...vals), span = mx - mn || 1;
+    return `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${vals.map((v,i) => `${xs(i).toFixed(1)},${(H - 4 - (v - mn) / span * (H - 10)).toFixed(1)}`).join(" ")}"/>`;
+  };
+  return `<div class="spark">近 ${h.length} 天想看人数走势（琥珀色猫眼，浅色淘票票）
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${h.some(p => p[2]) ? line(2, "#d9ece6") : ""}${line(1, "#f4b740")}</svg></div>`;
+}
+function schedBlock(m){
+  return S.data.cinemas.map(c => {
+    const days = (S.sched[String(c.id)] || {})[String(m.id)];
+    if (!days || !days.length) return `<div class="block"><h3>${esc(c.short)}</h3><p class="no-show">还没开票。开票后会推送提醒你。</p></div>`;
+    const key = `d-${c.id}`;
+    return `<div class="block" data-sched="${c.id}"><h3>${esc(c.short)}  共 ${days.reduce((a,d) => a + d.shows.length, 0)} 场</h3>
+      <div class="dates">${days.map((d,i) => `<button aria-pressed="${i===0}" data-i="${i}"><b>${md(d.date)}</b>${rel(d.date).length <= 2 ? rel(d.date) : wk(d.date)}</button>`).join("")}</div>
+      <div class="times" id="${key}">${times(days[0])}</div></div>`;
+  }).join("");
+}
+function times(d){ return d.shows.map(s => `<div><b>${esc(s.tm)}</b>${esc(s.tp || "")} ${esc(s.lang || "")}<br>${esc(s.th || "")}</div>`).join(""); }
+function openMovie(id, push = true){
+  const m = S.data.movies.find(x => String(x.id) === String(id)); if (!m) return;
+  const fav = S.favs.has(String(m.id));
+  const facts = [
+    m.dir && `导演  ${m.dir}`, m.star && `主演  ${m.star}`, [m.cat, m.src, m.dur && m.dur + " 分钟"].filter(Boolean).join("  "),
+    m.pubDesc || (m.rt && m.rt + " 上映"), m.ver && `版本  ${m.ver}`].filter(Boolean);
+  const t = m.tpp, i = m.imdb, mo = m.maoyan;
+  $("#sheet").innerHTML = `
+    <div class="sheet-bar"><button id="close">返回</button>
+      <button class="fav" id="fav" aria-pressed="${fav || m.watch}">${fav || m.watch ? "已关注" : "关注"}</button></div>
+    <div class="hero"><img src="${esc(m.img)}" alt="" referrerpolicy="no-referrer">
+      <div><h1>${esc(m.nm)}</h1>${m.enm ? `<div class="en">${esc(m.enm.split(",")[0])}</div>` : ""}
+      <div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join("")}</div></div></div>
+    <div class="big-scores">
+      <a href="${esc(mo.url)}" target="_blank" rel="noopener">${score(mo.sc)}<small>猫眼${mo.snum ? " " + wan(mo.snum) + "人评" : ""}</small></a>
+      <a href="${esc(t ? t.url : "#")}" target="_blank" rel="noopener">${score(t && t.sc)}<small>淘票票${t && t.scCount ? " " + wan(t.scCount) + "人评" : ""}</small></a>
+      <a href="${esc(i ? i.url : "#")}" target="_blank" rel="noopener">${score(i && i.sc)}<small>IMDb${i && i.votes ? " " + wan(i.votes) + "人评" : i ? "" : " 未匹配"}</small></a>
+    </div>
+    <div class="wish-panel">
+      <div><b>${wan(mo.wish)}</b><small>猫眼想看${m.delta.maoyan ? ` · 较昨天 ${signed(m.delta.maoyan)}` : ""}</small></div>
+      <div><b>${t ? wan(t.wish) : "–"}</b><small>淘票票想看${m.delta.tpp ? ` · 较昨天 ${signed(m.delta.tpp)}` : ""}</small></div>
+    </div>
+    ${spark(String(m.id))}
+    ${schedBlock(m)}
+    ${m.dra ? `<div class="block"><h3>剧情简介</h3><p class="dra">${esc(m.dra)}</p></div>` : ""}
+    <div class="block"><h3>去购票或看更多</h3><div class="links">
+      <a href="${esc(mo.url)}" target="_blank" rel="noopener">猫眼</a>
+      ${t ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">淘票票</a>` : ""}
+      ${i ? `<a href="${esc(i.url)}" target="_blank" rel="noopener">IMDb</a>` : ""}
+      ${m.video ? `<a href="${esc(m.video)}" target="_blank" rel="noopener">预告片</a>` : ""}
+    </div></div>
+    <p class="tip">"关注"会把这部片放到列表最上面（只在这台手机上生效）。想让它开分、加场时也推送，把片名加到仓库 config.json 的 watch 里。</p>`;
+  const sh = $("#sheet"); sh.scrollTop = 0; sh.classList.add("on"); document.body.style.overflow = "hidden";
+  if (push) history.pushState({m: m.id}, "", "#m=" + m.id);
+  $("#close").onclick = () => history.state && history.state.m ? history.back() : closeMovie();
+  $("#fav").onclick = e => {
+    const k = String(m.id); S.favs.has(k) ? S.favs.delete(k) : S.favs.add(k); saveFavs();
+    const on = S.favs.has(k) || m.watch; e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.textContent = on ? "已关注" : "关注"; render();
+  };
+  sh.querySelectorAll("[data-sched]").forEach(b => b.querySelectorAll(".dates button").forEach(btn => btn.onclick = () => {
+    const days = S.sched[b.dataset.sched][String(m.id)];
+    b.querySelectorAll(".dates button").forEach(x => x.setAttribute("aria-pressed", x === btn));
+    b.querySelector(".times").innerHTML = times(days[+btn.dataset.i]);
+  }));
+  $("#close").focus({preventScroll:true});
+}
+function closeMovie(){ $("#sheet").classList.remove("on"); document.body.style.overflow = ""; if (location.hash) history.replaceState(null, "", location.pathname + location.search); }
+window.addEventListener("popstate", () => { const m = location.hash.match(/m=(\d+)/); m ? openMovie(m[1], false) : closeMovie(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").classList.contains("on")) $("#close").click(); });
+
+/* ---------- 交互 ---------- */
+$("#main").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) openMovie(b.dataset.id); });
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab; S.limit = 40; setPref("tab", S.tab);
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  render(); window.scrollTo(0, 0);
+});
+let qt; $("#q").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.target.value.trim(); S.limit = 40; render(); }, 150); });
+$("#onlyMine").onclick = e => { S.onlyMine = !S.onlyMine; setPref("onlyMine", S.onlyMine); e.currentTarget.setAttribute("aria-pressed", S.onlyMine); render(); };
+$("#refresh").onclick = () => { $("#updated").textContent = "刷新中…"; load(); };
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.data && Date.now() - new Date(S.data.updated) > 6e5) load(); });
+
+S.tab = getPref("tab", "now"); S.onlyMine = getPref("onlyMine", false);
+document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === S.tab));
+$("#onlyMine").setAttribute("aria-pressed", S.onlyMine);
+load();
+</script>
+</body>
+</html>

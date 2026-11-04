@@ -3,9 +3,9 @@ name: 更新电影数据
 on:
   push:
     branches: [main]
-    paths: ["config.json", "watch.json", "scraper/**", "docs/**", ".github/workflows/**"]
+    paths: ["config.json", "scraper/**", "docs/**", ".github/workflows/**"]
   schedule:
-    - cron: "*/10 * * * *"   # 每 10 分钟（GitHub 高峰期可能会晚一些）
+    - cron: "*/10 * * * *"   # 每 10 分钟兜底；GitHub 高峰期会晚，建议再配一个外部定时（见 README）
   workflow_dispatch:
     inputs:
       mode:
@@ -67,6 +67,8 @@ jobs:
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
           BARK_SERVER: ${{ vars.BARK_SERVER }}
+          DATA_REPO: ${{ vars.DATA_REPO }}      # 私有数据仓库，如 yourname/movie-radar-data
+          DATA_TOKEN: ${{ secrets.DATA_TOKEN }} # 能读这个私有仓库的密钥
         run: python scraper/run.py ${{ inputs.mode == 'force' && '--force' || '' }}
 
       - name: 保存数据（覆盖式，不让仓库越来越大）
@@ -83,11 +85,21 @@ jobs:
           git commit -q -m "数据 $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" radar-data
 
-      - name: 防止 GitHub 60 天后自动停用定时任务
+      - name: 防止 GitHub 60 天无活动自动停用定时任务
         if: inputs.mode != 'test-push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable" || true
+        run: |
+          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable" || true
+          # 每 25 天往主分支提交一次时间戳，算作仓库活动（这个文件不在触发路径里，不会引起额外运行）
+          f=.github/keepalive.txt
+          last=$(cat "$f" 2>/dev/null || echo 0); now=$(date +%s)
+          if [ $((now - last)) -gt 2160000 ]; then
+            echo "$now" > "$f"
+            git config user.name "movie-radar-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$f" && git commit -q -m "保活" && git push -q || echo "保活提交没成功，下次再试"
+          fi
 
       - uses: actions/configure-pages@v5
         if: inputs.mode != 'test-push'

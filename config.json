@@ -20,7 +20,8 @@
   "notify": {
     "new_ticketing": true,
     "score_open": "watch",
-    "new_coming_movies": false
+    "new_coming_movies": false,
+    "starred_ticket_alert": "call"
   },
   "imdb_overrides": {},
   "intervals_minutes": {

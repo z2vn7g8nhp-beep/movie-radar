@@ -509,6 +509,10 @@ img{display:block}
 @keyframes lightup{0%{filter:grayscale(1) brightness(1.15);transform:scale(.7)}50%{filter:grayscale(0) brightness(1.15);transform:scale(1.22);box-shadow:inset 0 0 0 2px #fff,0 0 0 8px hsla(var(--h),90%,70%,.25),0 0 26px hsla(var(--h),90%,60%,.7)}100%{filter:none;transform:none}}
 @keyframes rays{0%{opacity:0;transform:rotate(0) scale(.5)}30%{opacity:1}100%{opacity:0;transform:rotate(90deg) scale(1.2)}}
 .rv-actions{display:flex;gap:10px;margin-top:22px}
+.localwarn{margin-top:18px;background:rgba(255,248,235,.95);border-radius:16px;padding:12px 14px;box-shadow:inset 0 0 0 .5px #ffe0a8}
+.localwarn b{display:block;font-size:14px;font-weight:600;color:#8a5a00}
+.localwarn span{display:block;font-size:12px;color:#8a6a3a;margin-top:3px;line-height:1.55}
+.localwarn button{margin-top:8px;font-size:13px;font-weight:600;color:var(--coral-ink)}
 .rv-actions .btn{flex:1;height:48px}
 .rv-del{display:block;margin:16px auto 0;font-size:13px;color:var(--warn);text-align:center}
 .rv-img{width:100%;border-radius:12px}
@@ -590,9 +594,9 @@ function rtKey(rt){ if (!rt) return "9999-99-99"; if (rt.length === 4) return rt
 
 function starIds(){
   if (S.watch) return new Set(S.watch.stars.map(x => String(x.id)));
-  return new Set([...(S.data && S.data.stars || []).map(String), ...S.local]);
+  return new Set(S.local);
 }
-const isFav = m => S.watch ? starIds().has(String(m.id)) : (starIds().has(String(m.id)) || m.watch);
+const isFav = m => starIds().has(String(m.id));
 const openedAt = m => m.unreleased ? S.data.cinemas.map(c => [c, (m.opened || {})[String(c.id)]]).filter(x => x[1]) : [];
 
 /* ---------- 图标 ---------- */
@@ -722,10 +726,10 @@ function openedView(){
       <p>${esc(c.name)}  ${bad ? `<span style="color:var(--warn)">最近一次检查失败</span>` : c.at ? `${ago(c.at)}检查` : ""}</p></div>
       ${ms.map(m => { const o = m.opened[cid];
         return `<button class="otk" data-id="${m.id}"><img loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer">
-          <div style="min-width:0"><div class="t">${esc(m.nm)}${isFav(m) ? ` <span style="color:var(--amber)">★</span>` : ""}</div>
+          <div style="min-width:0"><div class="t">${esc(m.nm)}${isFav(m) ? ` <span style="color:var(--gold)">★</span>` : ""}</div>
             <div class="s">${o.at ? hm(o.at) + " 开票" : "监测开始前已开票"}${m.rt && m.rt.length === 10 && m.rt !== o.first ? `，${mdc(m.rt)}上映` : ""}</div></div>
           <div class="first"><b>${md(o.first)}</b><small>首场</small></div></button>`; }).join("")
-        || `<div class="none">还没有新片在这里开票。开票后会出现在这里${S.data.ticketing === "starred" ? "" : "并推送给你"}。</div>`}
+        || `<div class="none">还没有新片在这里开票。开票后会出现在这里${S.watch && S.watch.ticketing === "starred" ? "" : "并推送给你"}。</div>`}
     </section>`;
   }).join("");
 }
@@ -750,7 +754,7 @@ function feedView(){
   }).join("") + `</div>`;
 }
 function foot(){
-  const names = {maoyan:"猫眼", tpp:"淘票票", douban:"豆瓣", imdb:"IMDb", rt:"烂番茄"};
+  const names = {maoyan:"猫眼", tpp:"淘票票", douban:"豆瓣", imdb:"IMDb", rt:"烂番茄", data:"星标数据"};
   S.data.cinemas.forEach(c => names["cinema:" + c.id] = c.short);
   const items = Object.entries(S.status).filter(([k]) => names[k]).map(([k, v]) =>
     `<li><span class="dot${v.ok ? "" : " bad"}"></span>${names[k]}  ${v.ok ? ago(v.at) + "更新" : esc(v.msg)}</li>`).join("");
@@ -830,6 +834,7 @@ function closeMovie(){ $("#sheet").classList.remove("on"); document.body.style.o
 window.addEventListener("popstate", () => { const m = location.hash.match(/^#m(\d+)/); m ? openMovie(m[1], false) : closeMovie(); });
 
 /* ---------- 星标：存到仓库的 watch.json，后台据此推送 ---------- */
+/* 网站仓库（公开）：网页和抓取；数据仓库（私有）：星标、票夹、海报备份 */
 const gh = {
   token: () => getPref("ghToken", ""),
   repo(){
@@ -840,16 +845,27 @@ const gh = {
     const owner = h.split(".")[0], first = location.pathname.split("/").filter(Boolean)[0];
     return `${owner}/${first || h}`;
   },
-  async call(method, path, body){
-    const r = await fetch(`https://api.github.com/repos/${gh.repo()}${path}`, {
-      method, headers: {Authorization: `Bearer ${gh.token()}`, Accept: "application/vnd.github+json"},
+  dataRepo(){
+    const saved = getPref("ghDataRepo", "");
+    if (saved) return saved;
+    const r = gh.repo(); return r ? `${r.split("/")[0]}/movie-radar-data` : "";
+  },
+  async req(repo, method, path, body, accept){
+    const r = await fetch(`https://api.github.com/repos/${repo}${path}`, {
+      method, headers: {Authorization: `Bearer ${gh.token()}`, Accept: accept || "application/vnd.github+json"},
       body: body ? JSON.stringify(body) : undefined });
     if (r.status === 401) throw new Error("密钥无效或已过期，请到设置里重新填写");
-    if (r.status === 403) throw new Error("密钥没有写入权限：Contents 需要选 Read and write");
-    if (r.status === 404 && method !== "GET") throw new Error("找不到仓库，检查设置里的仓库名");
+    if (r.status === 403) throw new Error("密钥权限不够：Contents 要选 Read and write，并且要勾选数据仓库");
+    if (r.status === 404 && method !== "GET") throw new Error(`找不到仓库 ${repo}，确认已经建好、密钥里也选了它`);
     return r;
   },
+  call(method, path, body){ return gh.req(gh.dataRepo(), method, path, body); },
+  site(method, path, body){ return gh.req(gh.repo(), method, path, body); },
 };
+/* 星标、开票模式改了以后，马上让后台跑一轮（密钥需要网站仓库的 Actions 权限，没有也不影响，等下一轮定时） */
+let dispatchT = 0;
+function dispatchRun(){ clearTimeout(dispatchT); dispatchT = setTimeout(() => {
+  gh.site("POST", "/actions/workflows/update.yml/dispatches", {ref: "main"}).catch(() => {}); }, 4000); }
 const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
 
@@ -905,6 +921,7 @@ async function toggleStar(m){
       d.stars = d.stars.filter(x => String(x.id) !== id);
       if (on) d.stars.push({id: m.id, nm: m.nm, at: new Date().toISOString()});
     }, `${on ? "星标" : "取消星标"}《${m.nm}》`);
+    dispatchRun();
     render();
     toast(on ? `已星标《${m.nm}》，开票和开分都会推送给你` : `已取消星标《${m.nm}》`);
   } catch (e) { paint(!on); toast(e.message); }
@@ -919,7 +936,7 @@ function toast(msg, action, fn){
 
 function renderSettings(){
   const tok = gh.token(), repo = gh.repo();
-  const w = S.watch || {stars: (S.data ? S.data.stars : []).map(id => ({id})), ticketing: S.data ? S.data.ticketing : "all"};
+  const w = S.watch || {stars: [...S.local].map(id => ({id})), ticketing: "all"};
   const byId = Object.fromEntries((S.data ? S.data.movies : []).map(m => [String(m.id), m]));
   const stars = tok ? w.stars : [...starIds()].map(id => ({id}));
   const repoNew = repo ? `https://github.com/settings/personal-access-tokens/new` : "https://github.com/settings/personal-access-tokens/new";
@@ -928,19 +945,20 @@ function renderSettings(){
     <h2>推送设置</h2>
     <p class="lead">星标一部电影后，它在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送到手机。</p>
     <div class="block"><h3>连接 GitHub <span class="state ${tok ? "ok" : ""}">${tok ? "已连接" : "未连接"}</span></h3>
-      ${tok ? `<p>星标会保存到仓库 ${esc(repo)} 的 watch.json，改动 1～2 分钟后生效。</p>
+      ${tok ? `<p>星标和票夹保存在私有仓库 ${esc(gh.dataRepo())}，只有你自己能看到。改动 1～2 分钟后生效。</p>
         <button class="btn ghost" id="logout">断开连接</button>` : `
-      <p>需要一个只能改这个仓库的 GitHub 密钥，填一次就行。</p>
+      <p>星标和票夹会存进你的一个<b>私有仓库</b>，别人看不到你看了什么、坐在哪。需要一个 GitHub 密钥，填一次就行。</p>
       <ol class="steps">
-        <li>用 Safari 打开 <a href="${repoNew}" target="_blank" rel="noopener">GitHub 新建密钥页面</a></li>
-        <li>Token name 随便填，Expiration 选最长</li>
-        <li>Repository access 选 <code>Only select repositories</code>，选 <code>${esc(repo.split("/")[1] || "你的仓库")}</code></li>
-        <li>Permissions 里找到 <code>Contents</code>，选 <code>Read and write</code></li>
-        <li>点 Generate token，复制生成的密钥，粘贴到下面</li>
+        <li>在 GitHub 新建一个 <b>Private</b> 仓库，名字叫 <code>${esc(gh.dataRepo().split("/")[1] || "movie-radar-data")}</code>（空的就行）</li>
+        <li>用 Safari 打开 <a href="${repoNew}" target="_blank" rel="noopener">GitHub 新建密钥页面</a>，Expiration 选最长</li>
+        <li>Repository access 选 <code>Only select repositories</code>，把 <code>${esc(repo.split("/")[1] || "网站仓库")}</code> 和 <code>${esc(gh.dataRepo().split("/")[1] || "movie-radar-data")}</code> 都选上</li>
+        <li>Permissions 里 <code>Contents</code> 选 <code>Read and write</code>，<code>Actions</code> 也选 <code>Read and write</code>（星标后马上生效要用）</li>
+        <li>点 Generate token，复制密钥粘贴到下面</li>
       </ol>
       <div class="field"><input id="tok" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button class="btn" id="saveTok">连接</button></div>
-      ${repo ? "" : `<div class="field" style="margin-top:8px"><input id="repo" placeholder="用户名/仓库名" autocapitalize="off" spellcheck="false"></div>`}
+      ${repo ? "" : `<div class="field" style="margin-top:8px"><input id="repo" placeholder="网站仓库，如 yourname/movie-radar" autocapitalize="off" spellcheck="false"></div>`}
+      <div class="field" style="margin-top:8px"><input id="drepo" value="${esc(gh.dataRepo())}" placeholder="私有仓库，如 yourname/movie-radar-data" autocapitalize="off" spellcheck="false"></div>
       <div class="err" id="tokErr" hidden></div>
       <p style="margin-top:10px;font-size:12px;color:var(--faint)">密钥只保存在这台手机的浏览器里。添加到主屏幕的网页和 Safari 里的是分开的，在哪个里面用就在哪个里面填。</p>`}
     </div>
@@ -962,20 +980,24 @@ function renderSettings(){
   if (save) save.onclick = async () => {
     const v = $("#tok").value.trim(), err = $("#tokErr");
     if ($("#repo")) setPref("ghRepo", $("#repo").value.trim());
+    if ($("#drepo") && $("#drepo").value.trim()) setPref("ghDataRepo", $("#drepo").value.trim());
     if (!v) { err.hidden = false; err.textContent = "先粘贴密钥。"; return; }
     if (!gh.repo()) { err.hidden = false; err.textContent = "填一下仓库名，例如 yourname/movie-radar。"; return; }
     save.disabled = true; save.textContent = "连接中…"; setPref("ghToken", v);
     try {
       const r = await gh.call("GET", "");
-      if (!r.ok) throw new Error(r.status === 404 ? "找不到仓库：确认密钥里选了这个仓库" : `连接失败（HTTP ${r.status}）`);
+      if (!r.ok) throw new Error(r.status === 404 ? `找不到私有仓库 ${gh.dataRepo()}：确认已经建好，密钥里也选了它` : `连接失败（HTTP ${r.status}）`);
       const info = await r.json();
       if (info.permissions && info.permissions.push === false) throw new Error("密钥没有写入权限：Contents 需要选 Read and write");
-      await syncStars(); syncDiary(); renderSettings(); toast("已连接 GitHub");
+      const siteOk = gh.repo() ? (await gh.site("GET", "").catch(() => ({ok: false}))).ok : false;
+      await syncStars(); syncDiary(); renderSettings();
+      toast(info.private === false ? "已连接。注意：这个数据仓库是公开的，建议在 GitHub 里改成 Private" :
+            siteOk ? "已连接 GitHub" : "已连接。密钥没选网站仓库，星标改动要等下一轮定时检查才生效");
     } catch (e) { setPref("ghToken", ""); save.disabled = false; save.textContent = "连接"; err.hidden = false; err.textContent = e.message; }
   };
   const out = $("#logout"); if (out) out.onclick = () => { setPref("ghToken", ""); S.watch = null; renderSettings(); render(); };
   $("#settings").querySelectorAll("input[name=tm]").forEach(r => r.onchange = async () => {
-    try { await writeWatch(d => d.ticketing = r.value, r.value === "starred" ? "开票提醒：只推送星标" : "开票提醒：所有新片");
+    try { await writeWatch(d => d.ticketing = r.value, r.value === "starred" ? "开票提醒：只推送星标" : "开票提醒：所有新片"); dispatchRun();
       toast(r.value === "starred" ? "以后只推送星标电影的开票" : "以后所有新片开票都会推送"); }
     catch (e) { toast(e.message); renderSettings(); }
   });
@@ -996,6 +1018,7 @@ S.orient = getPref("orient", "h");
 IC.check = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 
 /* ---- 存储：本机 + 仓库里的 diary.json ---- */
+S.diaryDel = new Set(getPref("diaryDel", []));
 async function readDiary(){
   const r = await gh.call("GET", `/contents/diary.json?t=${Date.now()}`);
   if (r.status === 404) return {data: {entries: []}, sha: null};
@@ -1004,41 +1027,110 @@ async function readDiary(){
   data.entries = Array.isArray(data.entries) ? data.entries : [];
   return {data, sha: j.sha};
 }
-async function writeDiary(mutate, message){
-  for (let i = 0; i < 3; i++) {
-    const {data, sha} = await readDiary();
-    mutate(data.entries);
-    const r = await gh.call("PUT", "/contents/diary.json", {message, sha: sha || undefined, content: b64e(JSON.stringify(data, null, 1) + "\n")});
-    if (r.ok) return data.entries;
-    if (r.status !== 409 && r.status !== 422) throw new Error(`HTTP ${r.status}`);
+const saveLocalDiary = () => { setPref("diary", S.diary); setPref("diaryDel", [...S.diaryDel]); };
+const clean = e => { const c = {...e}; delete c.pending; delete c._pbNew; return c; };
+const movieOf = mid => S.data && S.data.movies.find(m => String(m.id) === String(mid));
+const nextNo = list => Math.max(0, ...list.map(e => e.no || 0)) + 1;
+/* 合并：以 GitHub 上的为准，加上本机还没传上去的新票根，去掉本机删掉的；
+   顺便给老数据补编号、把豆瓣分更新成最新的、带上已备份的海报 */
+function mergeDiary(remote){
+  let changed = false;
+  const ids = new Set(remote.map(e => e.id));
+  const out = remote.filter(e => { if (S.diaryDel.has(e.id)) { changed = true; return false; } return true; }).map(e => ({...e}));
+  [...out].sort((a, b) => (a.date + a.at).localeCompare(b.date + b.at)).forEach(e => { if (!e.no) { e.no = nextNo(out); changed = true; } });
+  for (const e of S.diary) if (e.pending && !ids.has(e.id)) {
+    const c = clean(e);
+    if (!c.no || out.some(x => x.no === c.no)) c.no = nextNo(out);
+    out.push(c); changed = true;
   }
-  throw new Error("保存冲突");
+  for (const e of out) {
+    const m = movieOf(e.mid), sc = m && m.douban && m.douban.sc;
+    if (sc && sc !== e.db) { e.db = sc; changed = true; }
+    const local = S.diary.find(x => x.id === e.id);
+    if (local && local.pb && !e.pb) { e.pb = local.pb; changed = true; }
+  }
+  return {out, changed};
 }
-const saveLocalDiary = () => setPref("diary", S.diary);
-const clean = e => { const c = {...e}; delete c.pending; return c; };
-async function syncDiary(){
-  if (!gh.token()) return;
-  try {
-    const {data} = await readDiary();
-    const have = new Set(data.entries.map(e => e.id));
-    const pending = S.diary.filter(e => e.pending && !have.has(e.id));
-    S.diary = pending.length
-      ? await writeDiary(l => pending.forEach(e => { if (!l.some(x => x.id === e.id)) l.push(clean(e)); }), `收藏 ${pending.length} 张票根`)
-      : data.entries;
-    saveLocalDiary();
-    if (S.tab === "wallet") render();
-  } catch (e) { console.warn("票夹同步失败", e); }
+const blobB64 = b => new Promise((ok, no) => { const f = new FileReader(); f.onload = () => ok(String(f.result).split(",")[1]); f.onerror = no; f.readAsDataURL(b); });
+/* 把海报小图备份到私有仓库，猫眼链接以后失效了票根也不会变空白 */
+async function backupPosters(list, limit = 4){
+  let n = 0;
+  for (const e of list) {
+    if (e.pb || !e.img || n >= limit) continue; n++;
+    try {
+      const path = `posters/${e.mid}.webp`;
+      const head = await gh.call("GET", `/contents/${path}`);
+      if (head.status === 404) {
+        const blob = await (await fetch(big(e.img, 300), {referrerPolicy: "no-referrer"})).blob();
+        if (!blob.size || blob.size > 900000) continue;
+        const r = await gh.call("PUT", `/contents/${path}`, {message: `备份海报《${e.nm}》`, content: await blobB64(blob)});
+        if (!r.ok && r.status !== 422) continue;
+      } else if (!head.ok) continue;
+      e.pb = path; e._pbNew = true;
+    } catch {}
+  }
 }
-async function commitDiary(localMut, remoteMut, message){
+const posterCache = new Map();
+async function posterURL(e){
+  if (!e || !e.pb || !gh.token()) return null;
+  if (posterCache.has(e.pb)) return posterCache.get(e.pb);
+  const r = await gh.req(gh.dataRepo(), "GET", `/contents/${e.pb}`, null, "application/vnd.github.raw");
+  if (!r.ok) return null;
+  const url = URL.createObjectURL(await r.blob()); posterCache.set(e.pb, url); return url;
+}
+function posterFail(img, id){
+  img.onerror = null;
+  posterURL(S.diary.find(x => x.id === id)).then(u => { if (u) img.src = u; else img.style.opacity = 0; }).catch(() => { img.style.opacity = 0; });
+}
+let syncing = null;
+function syncDiary(){
+  if (!gh.token()) return Promise.resolve(false);
+  if (syncing) return syncing;
+  syncing = (async () => {
+    const delAtStart = new Set(S.diaryDel);
+    try {
+      let result = null;
+      for (let i = 0; i < 3 && !result; i++) {
+        const {data, sha} = await readDiary();
+        const {out, changed} = mergeDiary(data.entries);
+        await backupPosters(out);
+        const dirty = changed || out.some(e => e._pbNew);
+        const body = out.map(clean);
+        if (!dirty) { result = body; break; }
+        const r = await gh.call("PUT", "/contents/diary.json", {message: "更新票夹", sha: sha || undefined,
+          content: b64e(JSON.stringify({entries: body}, null, 1) + "\n")});
+        if (r.ok) result = body;
+        else if (r.status !== 409 && r.status !== 422) throw new Error(`HTTP ${r.status}`);
+      }
+      if (!result) throw new Error("保存冲突");
+      // 同步途中又新记或删掉的，保留下来，下一轮再传
+      delAtStart.forEach(id => S.diaryDel.delete(id));
+      const got = new Set(result.map(e => e.id));
+      const later = S.diary.filter(e => e.pending && !got.has(e.id));
+      S.diary = result.filter(e => !S.diaryDel.has(e.id)).concat(later);
+      saveLocalDiary();
+      if (S.tab === "wallet") render();
+      if (later.length || S.diaryDel.size) setTimeout(syncDiary, 500);
+      return true;
+    } catch (e) { console.warn("票夹同步失败", e); return false; }
+    finally { syncing = null; }
+  })();
+  return syncing;
+}
+async function commitDiary(localMut){
   localMut(S.diary); saveLocalDiary();
   if (!gh.token()) return true;
-  try { S.diary = await writeDiary(remoteMut, message); saveLocalDiary(); return true; }
-  catch (e) { toast("已存在这台手机上，同步到 GitHub 失败，稍后会自动重试"); return false; }
+  if (syncing) await syncing;
+  const ok = await syncDiary();
+  if (!ok) toast("已存在这台手机上，同步到 GitHub 失败，联网后会自动重试");
+  return ok;
 }
+addEventListener("online", () => syncDiary());
+document.addEventListener("visibilitychange", () => { if (!document.hidden && (S.diary.some(e => e.pending) || S.diaryDel.size)) syncDiary(); });
 
 /* ---- 统计与成就 ---- */
 function sortedDiary(){ return [...S.diary].sort((a, b) => (a.date + a.at).localeCompare(b.date + b.at)); }
-function serialOf(id){ return sortedDiary().findIndex(e => e.id === id) + 1; }
+function serialOf(id){ const e = S.diary.find(x => x.id === id); return e && e.no ? e.no : sortedDiary().findIndex(x => x.id === id) + 1; }
 const myCinemaNames = () => (S.data ? S.data.cinemas : []).map(c => c.short);
 function diaryStats(list = S.diary){
   const year = String(todayYmd()[0]), mine = new Set(myCinemaNames());
@@ -1052,7 +1144,8 @@ function diaryStats(list = S.diary){
     (e.src || "").split(/[,，/、\s]+/).filter(Boolean).forEach(g => regions.add(g));
     if (e.date.startsWith(year)) s.thisYear++;
     if (e.rt && e.rt.length === 10) { if (e.date === e.rt) s.premiere++; else if (e.date < e.rt) s.early++; }
-    if (e.starred) s.starred++; if (e.db >= 8.5) s.high++; if (e.wish && e.wish < 10000) s.gem++;
+    const mv = movieOf(e.mid), db = (mv && mv.douban && mv.douban.sc) || e.db, wish = e.wish || (mv && mv.wish && mv.wish.maoyan);
+    if (e.starred) s.starred++; if (db >= 8.5) s.high++; if (wish && wish < 10000) s.gem++;
     if (e.rating === 5) s.five++; if (e.rating === 1) s.one++;
   }
   const max = k => Math.max(0, ...Object.values(cnt[k] || {}));
@@ -1120,7 +1213,7 @@ function stubHTML(e, opt = {}){
     <div class="stub ${o} g-${genreOf(e.cat)}${sp ? " sp-" + sp : ""}" style="--tint:${e.tint || "#fff1ea"};--acc:${e.accent || "#d9481c"}">
       <div class="paper"></div>
       <div class="stub-main">
-        <img class="stub-p" src="${esc(e.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
+        <img class="stub-p" src="${esc(e.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="posterFail(this,'${e.id}')">
         <div class="stub-info">
           <div class="stub-t">${esc(e.nm)}</div>${e.enm ? `<div class="stub-en">${esc(e.enm)}</div>` : ""}
           <div class="stub-d"><b>${y}.${mo}.${d}</b><span>${wk(e.date)}</span></div>
@@ -1163,9 +1256,13 @@ function bindSeg(id, after){
 
 /* ---- 光泽随滑动流转 ---- */
 let sheenRAF = 0;
+const visStubs = new Set();
+const stubIO = "IntersectionObserver" in window ? new IntersectionObserver(es => {
+  es.forEach(en => en.isIntersecting ? visStubs.add(en.target) : visStubs.delete(en.target)); queueSheen(); }) : null;
+function observeStubs(){ if (!stubIO) return; stubIO.disconnect(); visStubs.clear(); document.querySelectorAll(".stub").forEach(el => stubIO.observe(el)); }
 function updateSheen(){
   sheenRAF = 0;
-  document.querySelectorAll(".stub").forEach(el => {
+  (stubIO ? visStubs : document.querySelectorAll(".stub")).forEach(el => {
     const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
     el.style.setProperty("--sh", Math.max(0, Math.min(1, (r.top + r.height / 2) / innerHeight)).toFixed(3));
   });
@@ -1239,9 +1336,9 @@ async function saveRecord(){
   const look = REC.look || await tintOf(m.img);
   const e = {id: "w" + Date.now().toString(36), mid: m.id, nm: m.nm, enm: m.enm || "", img: m.img, rt: m.rt || "",
     cat: m.cat || "", src: m.src || "", dir: m.dir || "", dur: m.dur || null, date, cinema, seat: $("#rSeat").value.trim(),
-    rating: REC.rating, note: $("#rNote").value.trim(), tint: look.tint, accent: look.accent,
+    rating: REC.rating, note: $("#rNote").value.trim(), tint: look.tint, accent: look.accent, no: nextNo(S.diary),
     db: m.douban && m.douban.sc || null, wish: m.wish ? m.wish.maoyan : null, starred: isFav(m), at: new Date().toISOString()};
-  await commitDiary(l => l.push({...e, pending: true}), l => { if (!l.some(x => x.id === e.id)) l.push(clean(e)); }, `收藏票根《${m.nm}》`);
+  await commitDiary(l => l.push({...e, pending: true}));
   closeRecord();
   const after = unlockedSet(diaryStats());
   showReveal(e, BADGES.filter(b => after.has(b.k) && !before.has(b.k)));
@@ -1268,20 +1365,21 @@ function showReveal(e, fresh = null, keepAnim = true){
       <span>${isNew ? `这是你的第 ${no} 张票根` : `第 ${no} 张票根，${mdc(e.date)}`}</span><br>${segHTML("rvSeg")}</div>
     <div class="rv-stub${S.orient === "v" ? " vmode" : ""}">${stubHTML(e, {stamp: isNew && keepAnim})}</div>${isNew && keepAnim && fresh.length ? burst() : ""}
     ${isNew && fresh.length ? `<div class="rv-badges">${fresh.map((b, i) => `<div class="rv-badge" style="animation-delay:${keepAnim ? 1 + i * .15 : 0}s">${medal(b)}<div><b>${b.n}<em>新成就</em></b><span>${b.d}</span></div></div>`).join("")}</div>` : ""}
+    ${isNew && !gh.token() ? `<div class="localwarn"><b>这张票根只存在这台手机上</b><span>Safari 长期不打开时，数据可能被系统清掉；添加到主屏幕的版本和 Safari 里的也不互通。连接 GitHub 后会自动备份到你的私有仓库。</span><button id="rvConnect">去连接 GitHub</button></div>` : ""}
     <div class="rv-actions"><button class="btn ghost" id="rvSave">存为图片</button><button class="btn" id="rvOk">${isNew ? "好的" : "关闭"}</button></div>
     ${isNew ? "" : `<button class="rv-del" id="rvDel">删除这张票根</button>`}
   </div>`;
   tintBack(e);
-  el.classList.add("on"); requestAnimationFrame(updateSheen);
+  el.classList.add("on"); observeStubs(); requestAnimationFrame(updateSheen);
   const close = () => el.classList.remove("on");
   el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
   $("#rvSave").onclick = () => saveStubImage(e);
+  const cn = $("#rvConnect"); if (cn) cn.onclick = () => { close(); openSettings(); };
   bindSeg("rvSeg", () => { showReveal(e, fresh, false); if (S.tab === "wallet") render(); });
   const del = $("#rvDel");
   if (del) del.onclick = async () => {
     if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "再点一次确认删除"; return; }
-    await commitDiary(l => { const i = l.findIndex(x => x.id === e.id); if (i >= 0) l.splice(i, 1); },
-                      l => { const i = l.findIndex(x => x.id === e.id); if (i >= 0) l.splice(i, 1); }, `删除票根《${e.nm}》`);
+    await commitDiary(l => { const i = l.findIndex(x => x.id === e.id); if (i >= 0) { if (!l[i].pending) S.diaryDel.add(e.id); l.splice(i, 1); } });
     close(); render(); toast("已删除这张票根");
   };
 }
@@ -1370,7 +1468,7 @@ async function stubCanvas(e, orient){
   if (H) x.fillRect(ox + perf, oy, TW - perf, TH); else x.fillRect(ox, oy + perf, TW, TH - perf);
   // 海报
   try {
-    const im = await loadImg(big(e.img, 480));
+    const im = await loadImg(big(e.img, 480)).catch(async () => { const u = await posterURL(e); if (!u) throw new Error("no poster"); return loadImg(u); });
     x.save(); x.shadowColor = "rgba(24,26,48,.25)"; x.shadowBlur = 24; x.shadowOffsetY = 10;
     const [px, py, pw, ph] = H ? [ox + 44, oy + 45, 300, 450] : [ox + 40, oy + 40, TW - 80, 620];
     const rr2 = (X1, Y1, w1, h1, r1) => { x.beginPath(); x.moveTo(X1 + r1, Y1); x.arcTo(X1 + w1, Y1, X1 + w1, Y1 + h1, r1); x.arcTo(X1 + w1, Y1 + h1, X1, Y1 + h1, r1); x.arcTo(X1, Y1 + h1, X1, Y1, r1); x.arcTo(X1, Y1, X1 + w1, Y1, r1); x.closePath(); };
@@ -1480,7 +1578,7 @@ document.getElementById("main").addEventListener("click", ev => {
   if (ev.target.closest("#allBadges")) openBadges();
 });
 const _render0 = render;
-render = function(){ _render0(); bindSeg("walletSeg", render); requestAnimationFrame(updateSheen); };
+render = function(){ _render0(); bindSeg("walletSeg", render); observeStubs(); requestAnimationFrame(updateSheen); };
 
 /* ---------- 交互 ---------- */
 $("#main").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) openMovie(b.dataset.id); });

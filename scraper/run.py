@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import traceback
+import requests
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -87,8 +88,26 @@ def site_url(cfg):
 
 
 def load_watch():
-    """网页上点的星标存在仓库根目录的 watch.json 里。"""
-    w = load_json(ROOT / "watch.json", {}) or {}
+    """星标和开票提醒模式存在私有仓库的 watch.json（环境变量 DATA_REPO / DATA_TOKEN）。
+    没配私有仓库时退回读本仓库根目录的 watch.json。返回 (星标, 模式, 是否读取成功)。"""
+    repo, token = os.environ.get("DATA_REPO", "").strip(), os.environ.get("DATA_TOKEN", "").strip()
+    w, ok = None, True
+    if repo and token:
+        try:
+            r = requests.get(f"https://api.github.com/repos/{repo}/contents/watch.json", timeout=20,
+                             headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.raw"})
+            if r.status_code == 200:
+                w = r.json()
+            elif r.status_code == 404:
+                w = {}
+            else:
+                ok = False
+                print(f"[失败] 读取私有仓库星标 HTTP {r.status_code}")
+        except (requests.RequestException, ValueError) as e:
+            ok = False
+            print(f"[失败] 读取私有仓库星标：{e.__class__.__name__}")
+    if w is None:
+        w = load_json(ROOT / "watch.json", {}) or {}
     stars = {}
     for x in w.get("stars") or []:
         if isinstance(x, dict) and x.get("id"):
@@ -96,20 +115,20 @@ def load_watch():
         elif isinstance(x, (int, str)) and str(x).isdigit():
             stars[str(x)] = ""
     mode = w.get("ticketing") if w.get("ticketing") in ("all", "starred") else "all"
-    return stars, mode
+    return stars, mode, ok
 
 
 class Radar:
     def __init__(self, cfg, args):
         self.cfg = cfg
         self.args = args
-        self.stars, self.ticket_mode = load_watch()
+        self.stars, self.ticket_mode, self.watch_ok = load_watch()
         self.state = load_json(STATE_FILE, {})
         st = self.state
         for k, v in {"version": 2, "bootstrapped": False, "last": {}, "movies": {}, "detail_at": {},
                      "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "wiki_at": {},
                      "douban": {}, "rt": {}, "opened": {}, "cinemas_ok": {},
-                     "history": {}, "events": [], "scored": {}, "known": {}}.items():
+                     "history": {}, "events": [], "scored": {}, "known": {}, "fails": {}}.items():
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
         self.events = []
@@ -158,7 +177,7 @@ class Radar:
 
     def event(self, kind, title, body, mid=None, cid=None, push=True, star=False):
         """所有动态都记进网页的"动态"列表；push=True 的才推送到手机。"""
-        e = {"at": NOW_S, "type": kind, "title": title, "body": body, "push": push, "star": star}
+        e = {"at": NOW_S, "type": kind, "title": title, "body": body, "push": push, "_star": star}
         if mid:
             e["mid"] = mid
         if cid:
@@ -295,8 +314,6 @@ class Radar:
                     body = f"《{m['nm']}》首场 {md(o['first'])}"
                     if rt and len(rt) == 10 and o["first"] != rt:
                         body += f"，{md(rt)}正式上映"
-                    if star:
-                        body = "⭐ " + body
                     self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
                                push=self.ticket_mode == "all" or star, star=star)
             n_pre = sum(1 for mid in data["movies"] if mid in reg)
@@ -492,6 +509,9 @@ class Radar:
         }
 
     def check_scores(self):
+        if not self.watch_ok:
+            print("  星标数据没读到，这轮跳过开分检查")
+            return
         mode = self.cfg["notify"].get("score_open", "watch")
         scored = self.state["scored"]
         st = self.state
@@ -516,8 +536,33 @@ class Radar:
             if cur["rt"] and prev.get("rt") is False:
                 parts.append(f"烂番茄 {st['rt'][mid]['critics']}%")
             if parts:
-                self.event("score", "📊 开分了", ("⭐ " if star else "") + f"《{r.get('nm')}》" + " / ".join(parts),
+                self.event("score", "📊 开分了", f"《{r.get('nm')}》" + " / ".join(parts),
                            mid=mid, push=push, star=star)
+
+    # ------------------------------------------------------------ 数据源健康
+    def check_health(self, minutes=60):
+        names = {"maoyan": "猫眼电影列表"}
+        names.update({f"cinema:{c['id']}": f"{c['short']} 开票检查" for c in self.cfg["cinemas"]})
+        if os.environ.get("DATA_REPO") and os.environ.get("DATA_TOKEN"):
+            names["data"] = "读取星标（私有仓库）"
+            self.mark("data", self.watch_ok, "" if self.watch_ok else "读取失败，检查 DATA_TOKEN 是否过期")
+        fails = self.state["fails"]
+        for src, name in names.items():
+            stv = self.status.get(src)
+            if not stv or stv.get("at") != NOW_S:
+                continue  # 这轮没检查这一项
+            f = fails.get(src)
+            if not stv.get("ok"):
+                if not f:
+                    fails[src] = {"since": NOW_S, "alerted": False}
+                elif not f["alerted"] and ago(f["since"]) >= timedelta(minutes=minutes):
+                    self.event("health", "⚠️ 检查失败", f"{name}已经连续失败 {int(ago(f['since']).total_seconds() // 3600) or 1} 小时：{stv.get('msg')}。"
+                               f"这段时间开票提醒可能会漏，会继续自动重试。", push=True)
+                    f["alerted"] = True
+            elif f:
+                if f["alerted"]:
+                    self.event("health", "✅ 已恢复", f"{name}恢复正常了。", push=True)
+                fails.pop(src, None)
 
     # ------------------------------------------------------------ 输出
     def write_outputs(self):
@@ -558,7 +603,6 @@ class Radar:
                        if rt.get("id") else None),
                 "links": {"maoyan": f"https://m.maoyan.com/movie/{r['id']}", "tpp": tp.get("url")},
                 "opened": opened,
-                "watch": self.watched(mid, r.get("nm")),
             })
         movies.sort(key=lambda m: (m["status"] != "now", m["rank"] if m["status"] == "now" else 0,
                                    m.get("rt") or "9999", -(m["wish"]["maoyan"] or 0)))
@@ -578,10 +622,10 @@ class Radar:
             cinemas.append({"id": c["id"], "short": c["short"], "name": cs.get("name") or c["name"],
                             "addr": cs.get("addr"), "at": cs.get("at")})
 
-        st["events"] = (self.events + st["events"])[:150]
+        public = [{k: v for k, v in e.items() if not k.startswith("_")} for e in self.events]
+        st["events"] = (public + [{k: v for k, v in e.items() if k != "star"} for e in st["events"]])[:150]
         save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"],
-                                        "cinemas": cinemas, "movies": movies,
-                                        "stars": list(self.stars), "ticketing": self.ticket_mode})
+                                        "cinemas": cinemas, "movies": movies})
         save_json(OUT / "history.json", history)
         save_json(OUT / "events.json", st["events"][:100])
         save_json(OUT / "status.json", {"updated": NOW_S, "sources": self.status}, pretty=True)
@@ -601,18 +645,25 @@ class Radar:
         url = site_url(self.cfg)
         groups, mids = {}, {}
         for e in to_push:
-            groups.setdefault(e["title"], []).append(e["body"])
-            mids.setdefault(e["title"], []).append(e.get("mid"))
-        for i, (title, bodies) in enumerate(groups.items()):
+            key = (e["title"], bool(e.get("_star")))
+            groups.setdefault(key, []).append(("⭐ " if e.get("_star") else "") + e["body"])
+            mids.setdefault(key, []).append(e.get("mid"))
+        alert = self.cfg["notify"].get("starred_ticket_alert", "call")
+        for i, ((title, star), bodies) in enumerate(sorted(groups.items(), key=lambda kv: not kv[0][1])):
             if i >= 6:
                 notify.push("🎬 电影雷达", f"还有 {len(groups) - 6} 条动态，打开网页查看", url)
                 break
             body = "\n".join(bodies[:8]) + (f"\n…等 {len(bodies)} 条" if len(bodies) > 8 else "")
-            level = "timeSensitive" if "开票" in title else None
+            ticket = "开票" in title
+            level, call = ("timeSensitive" if ticket or "失败" in title else None), False
+            if ticket and star and alert in ("call", "critical"):
+                call = True
+                if alert == "critical":
+                    level = "critical"
             link = url
-            if url and len(bodies) == 1 and mids[title][0]:
-                link = f"{url}#m{mids[title][0]}"
-            notify.push(title, body, link, level)
+            if url and len(bodies) == 1 and mids[(title, star)][0]:
+                link = f"{url}#m{mids[(title, star)][0]}"
+            notify.push(title, body, link, level, call=call)
 
     # ------------------------------------------------------------ main
     def run(self):
@@ -630,6 +681,7 @@ class Radar:
                 traceback.print_exc()
                 self.mark({"lists": "maoyan"}.get(name, name), False, f"程序出错：{e.__class__.__name__}")
         self.check_scores()
+        self.check_health()
         if first and any(k.startswith("cinema:") and v.get("ok") for k, v in self.status.items()):
             self.state["bootstrapped"] = True
             n = sum(len(o) for o in self.state["opened"].values())

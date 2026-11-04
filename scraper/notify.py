@@ -18,7 +18,7 @@ def bark_keys():
     return keys
 
 
-def push(title, body, url=None, level=None):
+def push(title, body, url=None, level=None, call=False):
     keys = bark_keys()
     if not keys:
         print(f"[推送-未配置BARK_KEY] {title} | {body}")
@@ -32,6 +32,10 @@ def push(title, body, url=None, level=None):
             payload["url"] = url
         if level:
             payload["level"] = level
+            if level == "critical":
+                payload["volume"] = 6
+        if call:
+            payload["call"] = "1"  # Bark 持续响铃约 30 秒
         try:
             r = requests.post(server + "/push", json=payload, timeout=15)
             if r.status_code != 200:

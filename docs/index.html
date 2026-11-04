@@ -275,6 +275,11 @@ img{display:block}
 .cl .i{font-size:12px;color:var(--faint);text-align:right;line-height:1.45}
 .cl.open{background:var(--coral-bg);box-shadow:inset 0 0 0 .5px var(--coral-line)}
 .cl.open .i{color:var(--coral-ink)}
+a.cl{color:inherit;text-decoration:none;transition:transform .15s}
+a.cl:active{transform:scale(.98)}
+.cl .r{display:flex;align-items:center;gap:12px}
+.cl .go{display:inline-flex;align-items:center;gap:2px;padding:6px 11px 6px 12px;border-radius:999px;background:var(--coral);color:#fff;font-size:12px;font-weight:600;white-space:nowrap}
+.cl .go svg{width:12px;height:12px}
 .links{display:flex;gap:8px;flex-wrap:wrap}
 .links a{padding:9px 15px;border-radius:14px;background:var(--card);font-size:13px;font-weight:500;color:var(--ink-2);box-shadow:0 1px 3px rgba(24,26,48,.06)}
 .links a:first-child{background:var(--coral);color:#fff}
@@ -597,6 +602,7 @@ function starIds(){
   return new Set(S.local);
 }
 const isFav = m => starIds().has(String(m.id));
+const buyURL = (cid, mid) => `https://m.maoyan.com/mtrade/cinema/cinema?cinemaId=${cid}&ci=${S.data.ci || 42}&movieId=${mid}`;
 const openedAt = m => m.unreleased ? S.data.cinemas.map(c => [c, (m.opened || {})[String(c.id)]]).filter(x => x[1]) : [];
 
 /* ---------- 图标 ---------- */
@@ -813,7 +819,9 @@ function openMovie(id, push = true){
     </div>
     <div class="wishbox"><div><div class="big">${wanH(m.wish.maoyan)}</div><div class="lab">人在猫眼想看${m.delta.maoyan ? `，今天 <span class="d">${signed(m.delta.maoyan)}</span>` : ""}${m.wish.tpp != null ? `<br>淘票票 ${wan(m.wish.tpp)} 人` : ""}</div></div>${wishSpark(String(m.id))}</div>
     ${m.unreleased ? `<div class="blk"><h4>你的影院</h4><div class="cines">${S.data.cinemas.map(c => { const o = (m.opened || {})[String(c.id)];
-        return `<div class="cl${o ? " open" : ""}"><span class="n">${esc(c.short)}</span><span class="i">${o ? `${o.at ? hm(o.at) + " 开票" : "已开票"}<br>首场 ${mdc(o.first)}` : "还没开票"}</span></div>`; }).join("")}</div></div>` : ""}
+        const i = `<span class="i">${o ? `${o.at ? hm(o.at) + " 开票" : "已开票"}<br>首场 ${mdc(o.first)}` : "还没开票"}</span>`;
+        return o ? `<a class="cl open" href="${esc(buyURL(c.id, m.id))}" target="_blank" rel="noopener"><span class="n">${esc(c.short)}</span><span class="r">${i}<span class="go">选座 ›</span></span></a>`
+                 : `<div class="cl"><span class="n">${esc(c.short)}</span>${i}</div>`; }).join("")}</div></div>` : ""}
     ${m.dra ? `<div class="blk"><h4>剧情</h4><p class="dra">${esc(m.dra)}</p></div>` : ""}
     ${dl.length ? `<div class="blk"><h4>信息</h4><dl class="dl">${dl.map(([k,v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>` : ""}
     <div class="blk"><h4>去看看</h4><div class="links">

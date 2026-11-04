@@ -77,6 +77,11 @@ def md(d):
         return d or ""
 
 
+def buy_url(ci, cid, mid):
+    """猫眼这家影院的排片页，并选好这部电影：点开就能挑场次、选座。"""
+    return f"https://m.maoyan.com/mtrade/cinema/cinema?cinemaId={cid}&ci={ci}&movieId={mid}"
+
+
 def site_url(cfg):
     if cfg.get("site_url"):
         return cfg["site_url"]
@@ -175,13 +180,15 @@ class Radar:
         """评分优先刷新、开分要提醒的片子：已在关注影院开票的、关注列表里的。"""
         return self.opened_anywhere(mid) or self.watched(mid, r.get("nm"))
 
-    def event(self, kind, title, body, mid=None, cid=None, push=True, star=False):
+    def event(self, kind, title, body, mid=None, cid=None, push=True, star=False, buy=None):
         """所有动态都记进网页的"动态"列表；push=True 的才推送到手机。"""
         e = {"at": NOW_S, "type": kind, "title": title, "body": body, "push": push, "_star": star}
         if mid:
             e["mid"] = mid
         if cid:
             e["cid"] = cid
+        if buy:
+            e["buy"] = buy
         self.events.append(e)
 
     @staticmethod
@@ -315,7 +322,8 @@ class Radar:
                     if rt and len(rt) == 10 and o["first"] != rt:
                         body += f"，{md(rt)}正式上映"
                     self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
-                               push=self.ticket_mode == "all" or star, star=star)
+                               push=self.ticket_mode == "all" or star, star=star,
+                               buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
             n_pre = sum(1 for mid in data["movies"] if mid in reg)
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
 
@@ -624,7 +632,7 @@ class Radar:
 
         public = [{k: v for k, v in e.items() if not k.startswith("_")} for e in self.events]
         st["events"] = (public + [{k: v for k, v in e.items() if k != "star"} for e in st["events"]])[:150]
-        save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"],
+        save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"], "ci": self.cfg["city"]["maoyan_ci"],
                                         "cinemas": cinemas, "movies": movies})
         save_json(OUT / "history.json", history)
         save_json(OUT / "events.json", st["events"][:100])
@@ -643,11 +651,11 @@ class Radar:
         if not to_push:
             return
         url = site_url(self.cfg)
-        groups, mids = {}, {}
+        groups, evs = {}, {}
         for e in to_push:
             key = (e["title"], bool(e.get("_star")))
             groups.setdefault(key, []).append(("⭐ " if e.get("_star") else "") + e["body"])
-            mids.setdefault(key, []).append(e.get("mid"))
+            evs.setdefault(key, []).append(e)
         alert = self.cfg["notify"].get("starred_ticket_alert", "call")
         for i, ((title, star), bodies) in enumerate(sorted(groups.items(), key=lambda kv: not kv[0][1])):
             if i >= 6:
@@ -660,9 +668,11 @@ class Radar:
                 call = True
                 if alert == "critical":
                     level = "critical"
-            link = url
-            if url and len(bodies) == 1 and mids[(title, star)][0]:
-                link = f"{url}#m{mids[(title, star)][0]}"
+            link, one = url, evs[(title, star)][0] if len(bodies) == 1 else None
+            if one and one.get("buy"):
+                link = one["buy"]  # 只有一部新开票：点推送直接进猫眼这家影院的排片页
+            elif one and url and one.get("mid"):
+                link = f"{url}#m{one['mid']}"
             notify.push(title, body, link, level, call=call)
 
     # ------------------------------------------------------------ main

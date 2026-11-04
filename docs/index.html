@@ -76,11 +76,18 @@ img{display:block}
 
 /* ---------- 底部标签 ---------- */
 .tabs{position:fixed;left:14px;right:14px;bottom:calc(10px + var(--sb));z-index:6;display:flex;padding:5px;border-radius:26px;
-  background:rgba(255,255,255,.78);-webkit-backdrop-filter:saturate(1.8) blur(24px);backdrop-filter:saturate(1.8) blur(24px);
+  background:rgba(255,255,255,.93);-webkit-backdrop-filter:saturate(1.8) blur(24px);backdrop-filter:saturate(1.8) blur(24px);
   box-shadow:0 10px 30px rgba(24,26,48,.12),inset 0 0 0 .5px rgba(24,26,48,.06)}
+.tabfade{position:fixed;left:0;right:0;bottom:0;height:calc(110px + var(--sb));z-index:5;pointer-events:none;
+  background:linear-gradient(rgba(246,246,249,0),rgba(246,246,249,.85) 45%,rgba(246,246,249,.98))}
+.tab-ind{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:21px;background:var(--coral-bg);z-index:0;
+  transition:transform .5s cubic-bezier(.3,1.25,.45,1),width .35s cubic-bezier(.3,1.25,.45,1)}
+.tabs button{z-index:1}
+.tabs button[aria-selected=true] svg{animation:tabpop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tabpop{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:none}}
 .tabs button{flex:1;height:48px;border-radius:21px;font-size:10.5px;font-weight:500;color:var(--faint);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
 .tabs svg{width:22px;height:22px}
-.tabs button[aria-selected=true]{color:var(--coral);background:var(--coral-bg)}
+.tabs button[aria-selected=true]{color:var(--coral)}
 .tabs .n{position:absolute;top:5px;left:calc(50% + 7px);min-width:15px;height:15px;border-radius:8px;background:var(--coral);color:#fff;font-size:10px;line-height:15px;text-align:center;padding:0 4px;font-weight:600}
 
 /* ---------- 票根 ---------- */
@@ -107,7 +114,7 @@ img{display:block}
 .heroes::-webkit-scrollbar{display:none}
 .heroes .hero{flex:none;width:calc(100% - 26px);margin:0;scroll-snap-align:start}
 .heroes .hero:only-child{width:100%}
-.hero-dots{display:flex;justify-content:center;gap:5px;margin:-4px 0 4px}
+.hero-dots{display:flex;justify-content:center;gap:5px;margin:0 0 14px}
 .hero-dots i{width:5px;height:5px;border-radius:3px;background:var(--hair);transition:width .25s,background-color .25s}
 .hero-dots i.on{width:14px;background:var(--coral)}
 .hero{position:relative;margin:6px 16px 6px;border-radius:24px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
@@ -120,14 +127,15 @@ img{display:block}
 .hero-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.55),rgba(255,255,255,.15))}
 .hero-in{position:relative;display:grid;grid-template-columns:108px 1fr;gap:18px;align-items:center;padding:18px;width:100%}
 .hero-poster{width:108px;aspect-ratio:2/3;border-radius:12px;object-fit:cover;background:var(--soft);box-shadow:0 12px 28px rgba(24,26,48,.22)}
-.hero-why{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#b07a00;font-weight:500;margin-bottom:6px;background:rgba(255,255,255,.65);border-radius:9px;padding:1px 8px 1px 6px}
-.hero-why svg{width:10px;height:10px;color:var(--gold)}
+.hero-why{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#a77400;font-weight:500;margin-bottom:4px}
+.hero-why svg{width:11px;height:11px;color:var(--gold)}
 .hero h2{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.2;margin:0 0 2px;letter-spacing:.02em}
 .hero .en{font-family:var(--latin);font-style:italic;color:var(--ink-2);font-size:13px;margin-bottom:10px;line-height:1.3}
 .hero .when{font-size:13px;color:var(--ink-2);margin-bottom:10px}
 .hero .when b{font-family:var(--num);font-size:20px;font-weight:300;margin:0 1px;color:var(--ink)}
 .hero .tks{display:flex;gap:6px;flex-wrap:wrap}
-.hero .tk.ghost{background:rgba(255,255,255,.6)}
+.hero .tk{height:24px}
+.hero .tk.ghost{background:rgba(255,255,255,.55);color:var(--dim);box-shadow:inset 0 0 0 .5px rgba(24,26,48,.12)}
 
 /* ---------- 分区标题 ---------- */
 .sec{display:flex;align-items:baseline;gap:8px;padding:0 var(--pad);margin:26px 0 10px}
@@ -175,7 +183,12 @@ img{display:block}
 .row .right b{display:block;font-family:var(--num);font-size:15px;color:var(--ink);font-weight:400}
 .row .star-i{color:var(--gold);margin-left:4px;font-size:12px}
 
-/* ---------- 热映三列 ---------- */
+/* ---------- 热映三列：评分浮在海报左下角 ---------- */
+.prate{position:absolute;left:5px;right:5px;bottom:5px;display:flex;gap:3px;flex-wrap:wrap}
+.prate span{display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px 0 3px;border-radius:9px;background:rgba(16,16,24,.52);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;font-family:var(--num);font-weight:600;font-size:10.5px;line-height:1}
+.prate svg{width:12px;height:12px;flex:none}
+.prate .im svg{width:20px;height:11px}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:18px 12px;padding:6px var(--pad) 0}
 .grid .card{width:auto}
 
@@ -281,9 +294,14 @@ img{display:block}
 .steps code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:12px}
 .field{display:flex;gap:8px}
 .field input{flex:1;min-width:0;background:var(--bg);border:.5px solid var(--hair);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px}
-.btn{background:var(--coral);color:#fff;font-weight:500;border-radius:12px;padding:0 18px;white-space:nowrap;min-height:42px}
-.btn.ghost{background:var(--soft);color:var(--ink)}
-.btn:disabled{opacity:.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;white-space:nowrap;min-height:44px;padding:0 20px;border-radius:14px;
+  background:linear-gradient(180deg,#ff7d52,#ff5c2b);color:#fff;font-weight:600;font-size:15px;letter-spacing:.02em;
+  box-shadow:0 6px 16px rgba(255,92,43,.26),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .18s cubic-bezier(.3,.7,.4,1),box-shadow .2s,opacity .2s}
+.btn:active{transform:scale(.96);box-shadow:0 3px 8px rgba(255,92,43,.22),inset 0 1px 0 rgba(255,255,255,.2)}
+.btn.ghost{background:var(--card);color:var(--ink);font-weight:500;box-shadow:0 1px 3px rgba(24,26,48,.08),inset 0 0 0 .5px var(--hair)}
+.btn.ghost:active{box-shadow:0 1px 2px rgba(24,26,48,.06),inset 0 0 0 .5px var(--hair)}
+.btn:disabled{opacity:.55}
+.more,.chip,.rec-again,.tabs button,.sbar button,.icon-btn{text-align:center}
 .choice{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border-radius:14px;padding:12px 14px;margin-bottom:8px;width:100%}
 .choice:last-child{margin-bottom:0}
 .choice input{accent-color:var(--coral);margin-top:3px;width:17px;height:17px}
@@ -302,123 +320,218 @@ img{display:block}
 
 /* ================= 票夹 ================= */
 .cta{display:flex;gap:8px;justify-content:center;padding:16px var(--pad) 0}
-.rec-btn{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border-radius:20px;background:var(--ink);color:#fff;font-size:14px;font-weight:500;box-shadow:0 6px 16px rgba(24,26,48,.18)}
+.rec-btn{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 20px;border-radius:21px;background:var(--ink);color:#fff;font-size:14px;font-weight:500;box-shadow:0 8px 20px rgba(24,26,48,.2);transition:transform .18s}
+.rec-btn:active{transform:scale(.96)}
 .rec-btn svg{width:16px;height:16px}
-.seen{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;height:44px;padding:0 16px;border-radius:14px;background:var(--card);font-size:12px;color:var(--dim);box-shadow:0 1px 3px rgba(24,26,48,.06);line-height:1.3}
+.seen{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;height:46px;padding:0 16px;border-radius:15px;background:var(--card);font-size:12px;color:var(--dim);box-shadow:0 1px 3px rgba(24,26,48,.06);line-height:1.3}
 .seen span{font-size:14px;font-weight:500;color:var(--ink)}
-.rec-again{height:44px;padding:0 16px;border-radius:14px;background:var(--soft);font-size:13px;color:var(--ink-2)}
+.rec-again{height:46px;padding:0 16px;border-radius:15px;background:var(--soft);font-size:13px;color:var(--ink-2)}
 
-/* 票根 */
-.stubs{display:grid;gap:14px;padding:0 16px}
-.stubs > *{min-width:0}
-.stub-wrap{min-width:0;filter:drop-shadow(0 1px 1px rgba(24,26,48,.05)) drop-shadow(0 8px 16px rgba(24,26,48,.09));cursor:pointer}
-.stub{--tint:#fff1ea;--acc:#d9481c;position:relative;display:flex;height:152px;border-radius:14px;text-align:left;width:100%;
-  background:linear-gradient(105deg,var(--tint) 0%,#fff 82%);
-  -webkit-mask:radial-gradient(circle 7px at calc(100% - 74px) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at calc(100% - 74px) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;
-          mask:radial-gradient(circle 7px at calc(100% - 74px) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at calc(100% - 74px) 100%,#0000 97%,#000) bottom/100% 51% no-repeat}
-.stub-main{flex:1;min-width:0;display:flex;gap:12px;padding:13px;position:relative;overflow:hidden;border-radius:14px 0 0 14px}
-.stub-p{width:84px;height:126px;border-radius:7px;object-fit:cover;flex:none;background:var(--soft);box-shadow:0 4px 12px rgba(24,26,48,.18)}
+/* ---------- 票根（横 / 竖） ---------- */
+.stub-wrap{min-width:0;filter:drop-shadow(0 1px 1px rgba(24,26,48,.05)) drop-shadow(0 10px 18px rgba(24,26,48,.10));cursor:pointer;transition:transform .2s cubic-bezier(.3,.7,.4,1)}
+.stub-wrap:active{transform:scale(.98)}
+.stub{--tint:#fff1ea;--acc:#d9481c;--sh:.5;--tw:82px;--vt:74px;position:relative;width:100%;border-radius:14px;text-align:left;overflow:hidden;
+  background:linear-gradient(105deg,var(--tint) 0%,#fff 82%)}
+.stub.h{display:flex;height:158px;
+  -webkit-mask:radial-gradient(circle 8px at calc(100% - var(--tw)) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 8px at calc(100% - var(--tw)) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;
+          mask:radial-gradient(circle 8px at calc(100% - var(--tw)) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 8px at calc(100% - var(--tw)) 100%,#0000 97%,#000) bottom/100% 51% no-repeat}
+.stub.v{display:flex;flex-direction:column;background:linear-gradient(180deg,var(--tint) 0%,#fff 75%);
+  -webkit-mask:radial-gradient(circle 8px at 0 calc(100% - var(--vt)),#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 8px at 100% calc(100% - var(--vt)),#0000 97%,#000) right/51% 100% no-repeat;
+          mask:radial-gradient(circle 8px at 0 calc(100% - var(--vt)),#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 8px at 100% calc(100% - var(--vt)),#0000 97%,#000) right/51% 100% no-repeat}
+.paper,.sheen{position:absolute;inset:0;pointer-events:none}
+.paper{z-index:0}
+.stub.h .paper{-webkit-mask:linear-gradient(90deg,transparent 22%,#000 42%);mask:linear-gradient(90deg,transparent 22%,#000 42%)}
+.stub.v .paper{-webkit-mask:linear-gradient(180deg,transparent 50%,#000 66%);mask:linear-gradient(180deg,transparent 50%,#000 66%)}
+.sheen{z-index:4;background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.7) 48%,rgba(255,255,255,.15) 54%,transparent 62%);
+  background-size:280% 100%;background-position:calc((1 - var(--sh)) * 100%) 0;mix-blend-mode:soft-light}
+/* 按类型换纸纹 */
+.g-fun .paper{background:radial-gradient(circle at 2px 2px,color-mix(in srgb,var(--acc) 20%,transparent) 1.3px,transparent 1.8px) 0 0/11px 11px}
+.g-scifi .paper{background:linear-gradient(color-mix(in srgb,var(--acc) 12%,transparent) 1px,transparent 1px) 0 0/14px 14px,linear-gradient(90deg,color-mix(in srgb,var(--acc) 12%,transparent) 1px,transparent 1px) 0 0/14px 14px}
+.g-dark .paper{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--acc) 15%,transparent) 0 1px,transparent 1px 7px)}
+.g-action .paper{background:repeating-linear-gradient(-28deg,color-mix(in srgb,var(--acc) 8%,transparent) 0 9px,transparent 9px 22px)}
+.g-docu .paper{background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--acc) 14%,transparent) 0 1px,transparent 1px 13px)}
+.g-tender .paper{background:radial-gradient(circle at 3px 5px,color-mix(in srgb,var(--acc) 11%,transparent) .8px,transparent 1.2px) 0 0/9px 8px,radial-gradient(circle at 7px 2px,color-mix(in srgb,var(--acc) 8%,transparent) .7px,transparent 1.1px) 0 0/13px 11px}
+
+.stub-main{position:relative;z-index:1;flex:1;min-width:0;display:flex;gap:12px;padding:13px}
+.stub-p{width:86px;height:129px;border-radius:7px;object-fit:cover;flex:none;background:var(--soft);box-shadow:0 4px 12px rgba(24,26,48,.2)}
 .stub-info{min-width:0;flex:1;display:flex;flex-direction:column}
-.stub-t{font-family:var(--serif);font-weight:600;font-size:18px;line-height:1.25;letter-spacing:.02em;padding-right:40px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.stub-en{font-family:var(--latin);font-style:italic;font-size:11px;color:var(--dim);margin-top:2px;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stub-d{margin-top:auto;display:flex;gap:6px;align-items:baseline}
-.stub-d b{font-family:var(--num);font-weight:200;font-size:22px;letter-spacing:.01em;line-height:1.1}
-.stub-d span{font-size:11px;color:var(--dim)}
+.stub-t{font-family:var(--serif);font-weight:600;font-size:20px;line-height:1.22;letter-spacing:.02em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.stub-en{font-family:var(--latin);font-style:italic;font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stub-d{margin-top:auto;display:flex;gap:5px;align-items:baseline}
+.stub-d b{font-family:var(--num);font-weight:300;font-size:16px;letter-spacing:.03em;line-height:1.2}
+.stub-d span{font-size:10.5px;color:var(--dim)}
 .stub-c{font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.stub-n{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.stub-tail{width:74px;flex:none;border-left:1.5px dashed rgba(24,26,48,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 6px;background:rgba(255,255,255,.6);border-radius:0 14px 14px 0}
-.stub-tail small{font-size:9px;color:var(--faint);letter-spacing:.1em}
-.stub-tail b{font-family:var(--num);font-weight:200;font-size:28px;line-height:1;color:var(--acc);margin-top:1px}
-.stub-r{font-size:9px;color:var(--gold);letter-spacing:1px;margin-top:6px;white-space:nowrap}
-.stub-r.no{color:var(--faint);letter-spacing:0}
-.bars{display:flex;height:20px;margin-top:9px}
+.stub-n{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.stub-tail{position:relative;z-index:1;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.55)}
+.stub.h .stub-tail{width:var(--tw);border-left:1.5px dashed rgba(24,26,48,.16);padding:6px 4px}
+.tl-k{font-size:8.5px;color:var(--faint);letter-spacing:.14em}
+.tl-no{font-family:var(--num);font-weight:200;font-size:27px;line-height:1;color:var(--acc);margin-top:1px}
+.tl-r{font-size:9px;color:var(--gold);letter-spacing:.5px;margin-top:4px;white-space:nowrap}
+.tl-r.no{color:var(--faint);letter-spacing:0}
+.bars{display:flex;height:18px;margin-top:6px}
 .bars i{display:block;height:100%;background:var(--ink);opacity:.72}
-.stamp{position:absolute;right:8px;top:8px;width:50px;height:50px;border-radius:50%;border:2px solid rgba(229,72,77,.75);color:rgba(229,72,77,.82);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-14deg);font-size:11px;font-weight:700;letter-spacing:2px;
-  box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.5),inset 0 0 0 3.5px rgba(229,72,77,.45);mix-blend-mode:multiply;pointer-events:none}
-.stamp small{font-size:8px;letter-spacing:0;font-weight:500;margin-top:0}
-.stamp{font-size:10px}
-.stamping .stamp{animation:stamp .55s cubic-bezier(.3,1.5,.5,1) .45s both}
-.stub-wrap.stamping{animation:slidein .5s cubic-bezier(.22,1,.36,1) both}
-@keyframes stamp{0%{transform:rotate(-14deg) scale(2.4);opacity:0}100%{transform:rotate(-14deg) scale(1);opacity:1}}
-@keyframes slidein{0%{transform:translateY(24px) scale(.96);opacity:0}100%{transform:none;opacity:1}}
+.tl-code{font-family:var(--num);font-size:7.5px;letter-spacing:.06em;color:var(--dim);margin-top:2px;white-space:nowrap}
+.sp-tag{font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--acc);margin-bottom:2px}
 
-/* 票夹页 */
+/* 竖版 */
+.stub.v .stub-main{flex-direction:column;gap:0;padding:10px 10px 9px}
+.stub.v .stub-p{width:100%;height:auto;aspect-ratio:4/5;border-radius:8px}
+.stub.v .stub-info{flex:none;padding:9px 2px 0;height:98px;overflow:hidden}
+.stub.v .stub-t{font-size:15.5px;-webkit-line-clamp:1;display:block;white-space:nowrap;text-overflow:ellipsis}
+.stub.v .stub-en{font-size:10px}
+.stub.v .stub-d{margin-top:6px}
+.stub.v .stub-d b{font-size:13px}
+.stub.v .stub-c{font-size:10px}
+.stub.v .stub-n{font-size:10px}
+.stub.v .stub-tail{height:var(--vt);flex-direction:row;justify-content:space-between;align-items:center;border-top:1.5px dashed rgba(24,26,48,.16);padding:0 12px}
+.stub.v .tl-left{display:flex;flex-direction:column;align-items:flex-start}
+.stub.v .tl-right{display:flex;flex-direction:column;align-items:flex-end}
+.stub.v .tl-no{font-size:24px}
+.stub.v .tl-r{margin-top:0}
+.stub.v .bars{height:16px;margin-top:4px}
+
+/* 印章：压在撕票线上，微微倾斜 */
+.stamp{position:absolute;z-index:3;width:54px;height:54px;border-radius:50%;border:2px solid rgba(229,72,77,.78);color:rgba(229,72,77,.85);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;letter-spacing:2px;transform:rotate(-10deg);
+  box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.45),inset 0 0 0 3.5px rgba(229,72,77,.45);mix-blend-mode:multiply;pointer-events:none}
+.stamp small{font-size:8px;letter-spacing:0;font-weight:500}
+.stub.h .stamp{left:calc(100% - var(--tw) - 44px);bottom:6px}
+.stub.v .stamp{right:10px;bottom:calc(var(--vt) - 10px)}
+.stamping .stamp{animation:stamp .55s cubic-bezier(.3,1.5,.5,1) .5s both}
+.stub-wrap.stamping{animation:slidein .55s cubic-bezier(.22,1,.36,1) both}
+.stamping .sheen{animation:sweep 1.4s ease .9s both}
+@keyframes stamp{0%{transform:rotate(-10deg) scale(2.4);opacity:0}100%{transform:rotate(-10deg) scale(1);opacity:1}}
+@keyframes slidein{0%{transform:translateY(26px) scale(.95);opacity:0}100%{transform:none;opacity:1}}
+@keyframes sweep{0%{background-position:100% 0}100%{background-position:0 0}}
+
+/* 限定纸：第 10 张镭射、第 50 张黑卡烫金、每 100 张硫酸纸 */
+.stub.sp-holo{background:linear-gradient(115deg,#ffe1f0,#dcefff 22%,#e3fde0 42%,#fff3cc 62%,#ead9ff 82%,#ffe1f0);background-size:240% 100%;background-position:calc(var(--sh) * 100%) 0}
+.sp-holo .sheen{mix-blend-mode:overlay;opacity:1}
+.sp-holo .stub-tail{background:rgba(255,255,255,.35)}
+.stub.sp-gold{background:radial-gradient(120% 90% at 15% 0%,#2c2932,#141318 70%)}
+.sp-gold .stub-t,.sp-gold .stub-d b,.sp-gold .tl-no{background:linear-gradient(180deg,#f6e2ad,#b98f45);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sp-gold .stub-en,.sp-gold .stub-d span,.sp-gold .stub-c,.sp-gold .stub-n,.sp-gold .tl-k,.sp-gold .tl-code{color:rgba(232,207,152,.7)}
+.sp-gold .stub-tail{background:rgba(255,255,255,.03);border-color:rgba(232,207,152,.3)!important}
+.sp-gold .bars i{background:#d8b56c;opacity:.9}
+.sp-gold .sp-tag{color:#e8cf98}
+.sp-gold .stamp{border-color:rgba(216,181,108,.9);color:#d8b56c;mix-blend-mode:normal;box-shadow:inset 0 0 0 2.5px rgba(0,0,0,.2),inset 0 0 0 3.5px rgba(216,181,108,.5)}
+.sp-gold .sheen{background:linear-gradient(115deg,transparent 38%,rgba(255,226,160,.35) 50%,transparent 62%);background-size:280% 100%;background-position:calc((1 - var(--sh)) * 100%) 0;mix-blend-mode:screen}
+.sp-gold .paper{display:none}
+.stub.stub.sp-vellum{background:linear-gradient(105deg,rgba(255,255,255,.66),rgba(255,255,255,.4));-webkit-backdrop-filter:blur(10px) saturate(1.3);backdrop-filter:blur(10px) saturate(1.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.7)}
+.sp-vellum .paper{background:repeating-linear-gradient(95deg,rgba(24,26,48,.035) 0 1px,transparent 1px 5px)!important;-webkit-mask:none;mask:none}
+.sp-vellum .stub-tail{background:rgba(255,255,255,.25)}
+.vellum-under{position:absolute;inset:6px;border-radius:14px;background-size:cover;background-position:center;filter:blur(18px) saturate(1.4);opacity:.55;z-index:-1}
+
+/* ---------- 票夹页 ---------- */
 .wstats{display:grid;grid-template-columns:repeat(3,1fr);margin:4px 16px 0;background:var(--card);border-radius:20px;padding:16px 4px;box-shadow:0 1px 2px rgba(24,26,48,.04)}
 .wstats div{text-align:center}
 .wstats div+div{border-left:.5px solid var(--hair)}
 .wstats b{display:block;font-family:var(--num);font-weight:200;font-size:34px;line-height:1}
 .wstats span{font-size:11px;color:var(--faint)}
 .sec-more{margin-left:auto;font-size:13px;color:var(--coral-ink)}
-.badges{gap:8px;padding-bottom:6px}
+.seg{margin-left:auto;display:flex;background:var(--soft);border-radius:9px;padding:2px}
+.seg button{height:26px;padding:0 12px;border-radius:7px;font-size:12px;color:var(--dim);transition:background-color .2s,color .2s}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--ink);font-weight:500;box-shadow:0 1px 3px rgba(24,26,48,.1)}
+.stubs{display:grid;gap:16px;padding:0 16px}
+.stubs.vmode{grid-template-columns:1fr 1fr;gap:16px 12px}
+.badges{gap:6px;padding-bottom:8px}
 .badge{flex:none;width:76px;display:flex;flex-direction:column;align-items:center;text-align:center}
-.medal{--h:20;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:26px;
-  background:radial-gradient(circle at 32% 26%,hsl(var(--h) 95% 95%),hsl(var(--h) 85% 80%) 70%,hsl(var(--h) 70% 70%));
-  box-shadow:inset 0 0 0 2px rgba(255,255,255,.75),0 4px 12px hsla(var(--h),70%,50%,.25)}
-.badge:not(.ok) .medal{filter:grayscale(1);opacity:.38;box-shadow:inset 0 0 0 2px rgba(255,255,255,.75)}
-.bn{font-size:11px;font-weight:500;margin-top:6px;line-height:1.3}
+.mw{position:relative;width:58px;height:58px}
+.medal{--h:20;position:relative;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:27px;
+  background:radial-gradient(circle at 32% 26%,hsl(var(--h) 95% 96%),hsl(var(--h) 85% 81%) 68%,hsl(var(--h) 70% 70%));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.8),inset 0 -3px 6px hsla(var(--h),60%,40%,.15),0 6px 14px hsla(var(--h),70%,50%,.25)}
+/* 未解锁：银白浮雕 */
+.badge:not(.ok) .medal{background:linear-gradient(150deg,#ffffff,#eceef3 60%,#e2e5ec);
+  box-shadow:inset 0 0 0 1px rgba(24,26,48,.07),inset 0 2px 2px #fff,inset 0 -2px 5px rgba(24,26,48,.07),0 1px 2px rgba(24,26,48,.04)}
+.badge:not(.ok) .medal .em{filter:grayscale(1) contrast(.7) brightness(1.15);opacity:.32}
+.bn{font-size:11px;font-weight:500;margin-top:7px;line-height:1.3}
 .bp{font-size:10px;color:var(--faint)}
 .badge:not(.ok) .bn{color:var(--dim)}
 .wallet-empty{margin:18px 16px 0;padding:28px 22px;border-radius:20px;background:var(--card);text-align:center;color:var(--dim);font-size:13px;line-height:1.7;box-shadow:0 1px 2px rgba(24,26,48,.04)}
-.wallet-empty .ghost-stub{margin:0 auto 16px;width:210px;height:84px;border-radius:10px;border:1.5px dashed var(--hair);position:relative;display:grid;place-items:center;color:var(--faint);font-size:12px}
-.hint{color:var(--faint);font-size:12px;text-align:center;margin:18px 30px 0}
+.wallet-empty .ghost-stub{margin:0 auto 16px;width:210px;height:84px;border-radius:10px;border:1.5px dashed var(--hair);display:grid;place-items:center;color:var(--faint);font-size:12px}
+.hint{color:var(--faint);font-size:12px;text-align:center;margin:20px 30px 0}
 
-/* 记录观影：底部弹出 */
+/* ---------- 记录观影：底部弹出 ---------- */
 .rec{position:fixed;inset:0;z-index:30;visibility:hidden}
 .rec.on{visibility:visible}
 .rec-back{position:absolute;inset:0;background:rgba(24,26,48,.28);opacity:0;transition:opacity .3s}
 .rec.on .rec-back{opacity:1}
-.rec-panel{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:24px 24px 0 0;padding:10px 18px calc(18px + var(--sb));
-  transform:translateY(100%);transition:transform .42s cubic-bezier(.22,1,.36,1);max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(24,26,48,.15)}
+.rec-panel{--tint:transparent;position:absolute;left:0;right:0;bottom:0;border-radius:26px 26px 0 0;padding:10px 18px calc(18px + var(--sb));
+  background:radial-gradient(130% 55% at 12% 0%,var(--tint),transparent 62%),var(--bg);transition:transform .45s cubic-bezier(.22,1,.36,1),background-color .4s;
+  transform:translateY(100%);max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(24,26,48,.15)}
 .rec.on .rec-panel{transform:none}
-.grab{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 12px}
+.grab{width:36px;height:5px;border-radius:3px;background:rgba(24,26,48,.12);margin:0 auto 12px}
 .rec h3{margin:0;font-size:20px;font-weight:600}
 .rec .rec-mv{margin:2px 0 14px;color:var(--dim);font-size:13px}
-.f{display:block;background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:8px}
+.f{display:block;background:rgba(255,255,255,.88);border-radius:15px;padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(24,26,48,.04)}
 .f > span{display:block;font-size:11px;color:var(--faint);margin-bottom:4px}
 .f input{width:100%;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);padding:2px 0;outline:none;-webkit-appearance:none;appearance:none;min-height:26px}
 .f input::placeholder{color:var(--faint)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{height:32px;padding:0 13px;border-radius:16px;background:var(--soft);font-size:13px;color:var(--ink-2)}
+.chip{height:32px;padding:0 13px;border-radius:16px;background:var(--soft);font-size:13px;color:var(--ink-2);transition:transform .18s,background-color .2s}
+.chip:active{transform:scale(.95)}
 .chip[aria-pressed=true]{background:var(--coral-bg);color:var(--coral-ink);box-shadow:inset 0 0 0 1px var(--coral-line);font-weight:500}
-.chips + input{margin-top:8px;border-top:.5px solid var(--hair)!important;padding-top:8px!important}
-.rstars{display:flex;gap:6px}
-.rstars button{font-size:28px;line-height:1;color:var(--soft);transition:transform .15s,color .15s;-webkit-text-stroke:0}
+#rOther{margin-top:8px;border-top:.5px solid var(--hair);padding-top:8px}
+.rstars{display:flex;gap:6px;align-items:center}
+.rstars button{font-size:29px;line-height:1;color:#e4e6ec}
 .rstars button.on{color:var(--gold)}
-.rstars button:active{transform:scale(1.25)}
-.rstars .lab{align-self:center;font-size:12px;color:var(--faint);margin-left:6px}
-.btn.wide{width:100%;margin-top:8px;height:48px;border-radius:14px;font-size:16px}
+.rstars button.pop{animation:starpop .4s cubic-bezier(.3,1.7,.5,1)}
+@keyframes starpop{0%{transform:scale(.7)}55%{transform:scale(1.3) rotate(-8deg)}100%{transform:none}}
+.rstars .lab{font-size:12px;color:var(--faint);margin-left:6px}
+.btn.wide{width:100%;margin-top:10px;height:50px;border-radius:15px;font-size:16px}
 
-/* 票根展示 / 庆祝 */
+/* ---------- 弹窗：票根 / 成就 ---------- */
 .reveal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;visibility:hidden}
 .reveal.on{visibility:visible}
-.rv-back{position:absolute;inset:0;background:rgba(246,246,249,.72);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);opacity:0;transition:opacity .3s}
+.rv-back{--t1:#ffe3d6;--t2:#e3ecff;position:absolute;inset:0;opacity:0;transition:opacity .35s;
+  background:radial-gradient(70% 45% at 20% 18%,var(--t1),transparent 70%),radial-gradient(60% 45% at 85% 80%,var(--t2),transparent 70%),rgba(246,246,249,.78);
+  -webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}
 .reveal.on .rv-back{opacity:1}
-.rv-in{position:relative;width:100%;max-width:440px;padding:0 16px;max-height:100vh;overflow-y:auto;padding-top:calc(var(--st) + 20px);padding-bottom:calc(var(--sb) + 20px)}
-.rv-h{text-align:center;margin-bottom:16px}
-.rv-h b{display:block;font-size:20px;font-weight:600}
+.rv-in{position:relative;width:100%;max-width:440px;padding:0 18px;max-height:100vh;overflow-y:auto;padding-top:calc(var(--st) + 24px);padding-bottom:calc(var(--sb) + 24px)}
+.rv-h{text-align:center;margin-bottom:18px}
+.rv-h b{display:block;font-size:21px;font-weight:600}
 .rv-h span{font-size:13px;color:var(--dim)}
-.rv-badges{margin-top:20px;display:grid;gap:8px}
-.rv-badge{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow);animation:pop .5s cubic-bezier(.3,1.5,.5,1) both}
-.rv-badge .medal{width:44px;height:44px;font-size:21px;flex:none}
-.rv-badge b{display:block;font-size:14px;font-weight:600}
+.rv-h .seg{display:inline-flex;margin:10px auto 0}
+.rv-stub.vmode{width:62%;margin:0 auto}
+.rv-badges{margin-top:22px;display:grid;gap:8px}
+.rv-badge{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.92);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);animation:pop .5s cubic-bezier(.3,1.5,.5,1) both}
+.rv-badge .mw,.rv-badge .medal{width:48px;height:48px;flex:none}
+.rv-badge .em{font-size:24px;line-height:1}
+.bdetail .em{font-size:54px;line-height:1}
+.medal .em{line-height:1}
+.rv-badge .medal{animation:lightup 1s cubic-bezier(.3,1.4,.5,1) both;animation-delay:inherit}
+.rv-badge .mw:before{content:"";position:absolute;inset:-14px;border-radius:50%;background:repeating-conic-gradient(from 0deg,hsla(var(--h),95%,62%,.35) 0 8deg,transparent 8deg 22deg);
+  -webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%);animation:rays 1.6s ease-out both;animation-delay:inherit}
+.rv-badge b{display:block;font-size:15px;font-weight:600}
 .rv-badge span{font-size:12px;color:var(--dim)}
-.rv-badge em{font-style:normal;font-size:10px;color:var(--coral-ink);background:var(--coral-bg);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
-@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
-.rv-actions{display:flex;gap:8px;margin-top:20px}
-.rv-actions .btn{flex:1;height:46px}
-.rv-del{display:block;margin:14px auto 0;font-size:13px;color:var(--warn)}
-.rv-img{width:100%;border-radius:12px;box-shadow:var(--shadow)}
-.burst{position:absolute;left:50%;top:38%;pointer-events:none}
-.burst i{position:absolute;width:7px;height:7px;border-radius:2px;opacity:0;animation:fly 1s cubic-bezier(.2,.7,.3,1) forwards}
+.rv-badge em{font-style:normal;font-size:10px;color:var(--coral-ink);background:var(--coral-bg);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+@keyframes pop{0%{transform:scale(.6) translateY(10px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes lightup{0%{filter:grayscale(1) brightness(1.15);transform:scale(.7)}50%{filter:grayscale(0) brightness(1.15);transform:scale(1.22);box-shadow:inset 0 0 0 2px #fff,0 0 0 8px hsla(var(--h),90%,70%,.25),0 0 26px hsla(var(--h),90%,60%,.7)}100%{filter:none;transform:none}}
+@keyframes rays{0%{opacity:0;transform:rotate(0) scale(.5)}30%{opacity:1}100%{opacity:0;transform:rotate(90deg) scale(1.2)}}
+.rv-actions{display:flex;gap:10px;margin-top:22px}
+.rv-actions .btn{flex:1;height:48px}
+.rv-del{display:block;margin:16px auto 0;font-size:13px;color:var(--warn);text-align:center}
+.rv-img{width:100%;border-radius:12px}
+.burst{position:absolute;left:50%;top:34%;pointer-events:none;z-index:5}
+.burst i{position:absolute;width:7px;height:7px;border-radius:2px;opacity:0;animation:fly 1.1s cubic-bezier(.2,.7,.3,1) forwards}
 @keyframes fly{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
-
-/* 全部成就 */
-.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px;margin:18px 16px 0}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 8px;margin:6px 0 0}
 .bgrid .badge{width:auto}
 .bgrid .bd{font-size:10px;color:var(--faint);line-height:1.35;margin-top:2px;padding:0 4px}
-.pbar{width:48px;height:3px;border-radius:2px;background:var(--soft);margin-top:4px;overflow:hidden}
+.pbar{width:50px;height:3px;border-radius:2px;background:rgba(24,26,48,.08);margin-top:5px;overflow:hidden}
 .pbar i{display:block;height:100%;background:var(--coral);border-radius:2px}
+/* 单个成就详情 */
+.bdetail{text-align:center;padding:10px 0 4px}
+.bdetail .mw,.bdetail .medal{width:110px;height:110px;font-size:52px;margin:0 auto}
+.bdetail .badge{width:auto}
+.bdetail h4{margin:18px 0 4px;font-size:22px;font-weight:600}
+.bdetail p{margin:0;color:var(--dim);font-size:14px}
+.bdetail .goal{margin:18px auto 0;max-width:280px;background:rgba(255,255,255,.9);border-radius:16px;padding:14px 16px;box-shadow:0 1px 3px rgba(24,26,48,.06);text-align:left}
+.bdetail .goal b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
+.bdetail .goal small{display:block;font-size:12px;color:var(--faint);margin-top:2px}
+.bdetail .goal .pbar{width:100%;height:5px;margin-top:10px}
+.bdetail .done{color:var(--up);font-weight:600}
+@media (prefers-reduced-motion:reduce){.stub-wrap,.stamp,.sheen,.rv-badge,.medal,.mw:before{animation:none!important}}
 
 </style>
 </head>
@@ -434,7 +547,8 @@ img{display:block}
 
 <main id="main"></main>
 
-<nav class="tabs" role="tablist">
+<div class="tabfade"></div>
+<nav class="tabs" role="tablist"><span class="tab-ind" id="tabInd"></span>
   <button role="tab" data-tab="coming" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></svg>待映</button>
   <button role="tab" data-tab="opened" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8.5a2 2 0 0 0 0 4v0a2 2 0 0 0 0 4V19h18v-2.5a2 2 0 0 1 0-4 2 2 0 0 1 0-4V6H3z" transform="translate(0 -.5)"/><path d="M15 7v11" stroke-dasharray="1.5 2.5"/></svg>已开票</button>
   <button role="tab" data-tab="now" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>热映</button>
@@ -521,15 +635,16 @@ function apply(d){
 }
 
 /* ---------- 组件 ---------- */
+function miniRates(m){ return ["db","im","tm"].map(k => { const v = val(k, m); return v ? `<span class="${k}">${IC[k]}${v}</span>` : ""; }).join(""); }
 function card(m, opt = {}){
   const o = openedAt(m);
   const sub = opt.sub != null ? opt.sub : (m.unreleased ? `${wan(m.wish.maoyan)} 人想看` : "");
   const r = rates(m);
   return `<button class="card${opt.lg ? " lg" : ""}" data-id="${m.id}">
     <div class="pw"><img loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
-      ${isFav(m) ? `<span class="star">${IC.star}</span>` : ""}${o.length ? tkMini(o) : ""}</div>
+      ${isFav(m) ? `<span class="star">${IC.star}</span>` : ""}${o.length ? tkMini(o) : ""}${opt.overlay ? `<div class="prate">${miniRates(m)}</div>` : ""}</div>
     <div class="t">${esc(m.nm)}</div>
-    ${r && !m.unreleased ? r : `<div class="s">${esc(sub)}</div>${r}`}
+    ${opt.overlay ? "" : r && !m.unreleased ? r : `<div class="s">${esc(sub)}</div>${r}`}
   </button>`;
 }
 function row(m){
@@ -617,7 +732,7 @@ function openedView(){
 function nowView(){
   const list = S.data.movies.filter(m => !m.unreleased && m.status === "now" && match(m)).sort((a,b) => a.rank - b.rank);
   if (!list.length) return `<p class="empty">${S.q ? `没有找到"${esc(S.q)}"。` : "暂时没有数据。"}</p>`;
-  return `<div class="grid">${list.slice(0, S.limit).map(m => card(m)).join("")}</div>` + (list.length > S.limit ? `<button class="more" id="more">显示更多</button>` : "");
+  return `<div class="grid">${list.slice(0, S.limit).map(m => card(m, {overlay: true})).join("")}</div>` + (list.length > S.limit ? `<button class="more" id="more">显示更多</button>` : "");
 }
 function feedView(){
   setPref("feedSeen", S.events[0] ? S.events[0].at : ""); $("#feedBadge").hidden = true;
@@ -877,6 +992,7 @@ $("#openSettings").onclick = openSettings;
 
 /* ================= 票夹：看过的电影、票根、成就 ================= */
 S.diary = getPref("diary", []);
+S.orient = getPref("orient", "h");
 IC.check = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 
 /* ---- 存储：本机 + 仓库里的 diary.json ---- */
@@ -892,8 +1008,7 @@ async function writeDiary(mutate, message){
   for (let i = 0; i < 3; i++) {
     const {data, sha} = await readDiary();
     mutate(data.entries);
-    const r = await gh.call("PUT", "/contents/diary.json", {message, sha: sha || undefined,
-      content: b64e(JSON.stringify(data, null, 1) + "\n")});
+    const r = await gh.call("PUT", "/contents/diary.json", {message, sha: sha || undefined, content: b64e(JSON.stringify(data, null, 1) + "\n")});
     if (r.ok) return data.entries;
     if (r.status !== 409 && r.status !== 422) throw new Error(`HTTP ${r.status}`);
   }
@@ -922,10 +1037,11 @@ async function commitDiary(localMut, remoteMut, message){
 }
 
 /* ---- 统计与成就 ---- */
-function sortedDiary(){ return [...S.diary].sort((a,b) => (a.date + a.at).localeCompare(b.date + b.at)); }
+function sortedDiary(){ return [...S.diary].sort((a, b) => (a.date + a.at).localeCompare(b.date + b.at)); }
 function serialOf(id){ return sortedDiary().findIndex(e => e.id === id) + 1; }
+const myCinemaNames = () => (S.data ? S.data.cinemas : []).map(c => c.short);
 function diaryStats(list = S.diary){
-  const year = String(todayYmd()[0]), mine = new Set((S.data ? S.data.cinemas : []).map(c => c.short));
+  const year = String(todayYmd()[0]), mine = new Set(myCinemaNames());
   const cnt = {}, inc = (k, v) => { cnt[k] = cnt[k] || {}; cnt[k][v] = (cnt[k][v] || 0) + 1; };
   const genres = new Set(), regions = new Set(), visited = new Set();
   const s = {n: list.length, thisYear: 0, premiere: 0, early: 0, starred: 0, high: 0, gem: 0, five: 0, one: 0};
@@ -942,62 +1058,82 @@ function diaryStats(list = S.diary){
   const max = k => Math.max(0, ...Object.values(cnt[k] || {}));
   return Object.assign(s, {cinemas: Object.keys(cnt.cinema || {}).length, repeat: max("movie"), perDay: max("day"),
     perMonth: max("month"), perCinema: max("cinema"), mine: visited.size, mineTotal: mine.size || 2,
-    genres: genres.size, regions: regions.size});
+    unvisited: [...mine].filter(c => !visited.has(c)), genres: genres.size, regions: regions.size});
 }
+const more = (s, c, g, unit) => `再看 ${g - c} ${unit}就能解锁`;
 const BADGES = [
-  {k: "first",   e: "🎟️", h: 14,  n: "第一张票根", d: "收藏第一张票根",          p: s => [s.n, 1]},
-  {k: "ten",     e: "🍿", h: 38,  n: "十部影迷",   d: "累计看过 10 部",          p: s => [s.n, 10]},
-  {k: "fifty",   e: "🎞️", h: 262, n: "资深影迷",   d: "累计看过 50 部",          p: s => [s.n, 50]},
-  {k: "hundred", e: "🏆", h: 45,  n: "百部之约",   d: "累计看过 100 部",         p: s => [s.n, 100]},
-  {k: "premiere",e: "🌅", h: 22,  n: "首映日",     d: "在上映当天去看",          p: s => [s.premiere, 1]},
-  {k: "early",   e: "⚡", h: 50,  n: "抢先一步",   d: "正式上映前就看到了",      p: s => [s.early, 1]},
-  {k: "wish",    e: "⭐", h: 44,  n: "心愿达成",   d: "看了一部星标过的电影",    p: s => [s.starred, 1]},
-  {k: "twice",   e: "🔁", h: 200, n: "二刷",       d: "同一部电影看两次",        p: s => [s.repeat, 2]},
-  {k: "double",  e: "🎬", h: 280, n: "连场",       d: "同一天看两部",            p: s => [s.perDay, 2]},
-  {k: "month",   e: "📅", h: 190, n: "月度影迷",   d: "一个月里看 4 部",         p: s => [s.perMonth, 4]},
-  {k: "both",    e: "🏙️", h: 220, n: "双城记",     d: "两家常去的影院都去过",    p: s => [s.mine, s.mineTotal]},
-  {k: "regular", e: "🪑", h: 30,  n: "老座位",     d: "在同一家影院看 10 部",    p: s => [s.perCinema, 10]},
-  {k: "genres",  e: "🎭", h: 320, n: "类型收集者", d: "看过 6 种类型",           p: s => [s.genres, 6]},
-  {k: "world",   e: "🌏", h: 170, n: "环球旅行",   d: "看过 4 个国家或地区的电影", p: s => [s.regions, 4]},
-  {k: "high",    e: "💎", h: 205, n: "高分猎手",   d: "看过 5 部豆瓣 8.5 以上",  p: s => [s.high, 5]},
-  {k: "gem",     e: "🔍", h: 140, n: "冷门宝藏",   d: "看过一部想看不到 1 万人的电影", p: s => [s.gem, 1]},
-  {k: "five",    e: "💯", h: 350, n: "满分时刻",   d: "第一次打出 5 星",         p: s => [s.five, 1]},
-  {k: "harsh",   e: "🍅", h: 8,   n: "毒舌",       d: "给一部电影打了 1 星",     p: s => [s.one, 1]},
+  {k: "first",   e: "🎟️", h: 14,  n: "第一张票根", d: "收藏第一张票根",          p: s => [s.n, 1],   hint: () => "看完一部电影，在电影页点“看过了”收进票夹"},
+  {k: "ten",     e: "🍿", h: 38,  n: "十部影迷",   d: "累计看过 10 部",          p: s => [s.n, 10],  hint: (s, c, g) => more(s, c, g, "部")},
+  {k: "fifty",   e: "🎞️", h: 262, n: "资深影迷",   d: "累计看过 50 部",          p: s => [s.n, 50],  hint: (s, c, g) => more(s, c, g, "部")},
+  {k: "hundred", e: "🏆", h: 45,  n: "百部之约",   d: "累计看过 100 部",         p: s => [s.n, 100], hint: (s, c, g) => more(s, c, g, "部")},
+  {k: "premiere",e: "🌅", h: 22,  n: "首映日",     d: "在上映当天去看",          p: s => [s.premiere, 1], hint: () => "挑一部星标的电影，上映当天就去看"},
+  {k: "early",   e: "⚡", h: 50,  n: "抢先一步",   d: "正式上映前就看到了",      p: s => [s.early, 1], hint: () => "去看一场点映或提前场，日期早于正式上映就算"},
+  {k: "wish",    e: "⭐", h: 44,  n: "心愿达成",   d: "看了一部星标过的电影",    p: s => [s.starred, 1], hint: () => "先星标一部想看的电影，看完再收进票夹"},
+  {k: "twice",   e: "🔁", h: 200, n: "二刷",       d: "同一部电影看两次",        p: s => [s.repeat, 2], hint: s => s.n ? "把看过的任意一部再看一遍，点“再记一次”" : "先看一部，再刷第二遍"},
+  {k: "double",  e: "🎬", h: 280, n: "连场",       d: "同一天看两部",            p: s => [s.perDay, 2], hint: () => "找一天连看两场"},
+  {k: "month",   e: "📅", h: 190, n: "月度影迷",   d: "一个月里看 4 部",         p: s => [s.perMonth, 4], hint: (s, c, g) => `一个月里看满 4 部（目前最多一个月 ${c} 部）`},
+  {k: "both",    e: "🏙️", h: 220, n: "双城记",     d: "两家常去的影院都去过",    p: s => [s.mine, s.mineTotal], hint: s => s.unvisited.length ? `还差${s.unvisited.join("、")}没去过` : "两家都去一次"},
+  {k: "regular", e: "🪑", h: 30,  n: "老座位",     d: "在同一家影院看 10 部",    p: s => [s.perCinema, 10], hint: (s, c, g) => `在同一家影院再看 ${g - c} 部就能解锁`},
+  {k: "genres",  e: "🎭", h: 320, n: "类型收集者", d: "看过 6 种类型",           p: s => [s.genres, 6], hint: (s, c, g) => `再看 ${g - c} 种没看过的类型`},
+  {k: "world",   e: "🌏", h: 170, n: "环球旅行",   d: "看过 4 个国家或地区的电影", p: s => [s.regions, 4], hint: (s, c, g) => `再看 ${g - c} 个新国家或地区的电影`},
+  {k: "high",    e: "💎", h: 205, n: "高分猎手",   d: "看过 5 部豆瓣 8.5 以上",  p: s => [s.high, 5], hint: (s, c, g) => `再看 ${g - c} 部豆瓣 8.5 分以上的电影`},
+  {k: "gem",     e: "🔍", h: 140, n: "冷门宝藏",   d: "看过一部想看不到 1 万人的电影", p: s => [s.gem, 1], hint: () => "看一部想看人数不到 1 万的小众电影"},
+  {k: "five",    e: "💯", h: 350, n: "满分时刻",   d: "第一次打出 5 星",         p: s => [s.five, 1], hint: () => "遇到心中的神作，给它打满 5 星"},
+  {k: "harsh",   e: "🍅", h: 8,   n: "毒舌",       d: "给一部电影打了 1 星",     p: s => [s.one, 1], hint: () => "遇到烂片时，勇敢打出 1 星"},
 ];
 const unlockedSet = s => new Set(BADGES.filter(b => { const [c, g] = b.p(s); return c >= g; }).map(b => b.k));
 const progress = (b, s) => { const [c, g] = b.p(s); return Math.min(1, c / g); };
+const medal = b => `<span class="mw" style="--h:${b.h}"><span class="medal" style="--h:${b.h}"><span class="em">${b.e}</span></span></span>`;
 function badgeHTML(b, s, un, full){
   const [c, g] = b.p(s), ok = un.has(b.k);
-  return `<button class="badge${ok ? " ok" : ""}" data-badge="${b.k}"><span class="medal" style="--h:${b.h}">${b.e}</span>
-    <span class="bn">${b.n}</span>${full ? `<span class="bd">${b.d}</span>` : ""}
+  return `<button class="badge${ok ? " ok" : ""}" data-badge="${b.k}">${medal(b)}<span class="bn">${b.n}</span>${full ? `<span class="bd">${b.d}</span>` : ""}
     ${ok ? `<span class="bp">已解锁</span>` : full ? `<span class="pbar"><i style="width:${progress(b, s) * 100}%"></i></span><span class="bp">${Math.min(c, g)}/${g}</span>` : `<span class="bp">${Math.min(c, g)}/${g}</span>`}</button>`;
 }
 
 /* ---- 票根 ---- */
+function genreOf(cat = ""){
+  if (/动画|喜剧|家庭|儿童|歌舞|音乐/.test(cat)) return "fun";
+  if (/科幻|奇幻/.test(cat)) return "scifi";
+  if (/悬疑|惊悚|犯罪|恐怖/.test(cat)) return "dark";
+  if (/动作|冒险|战争|武侠|灾难|运动/.test(cat)) return "action";
+  if (/纪录|历史|传记/.test(cat)) return "docu";
+  return "tender";
+}
+const SPECIAL = {holo: "镭射", gold: "烫金", vellum: "硫酸纸"};
+const specialOf = no => no === 10 ? "holo" : no === 50 ? "gold" : (no >= 100 && no % 100 === 0) ? "vellum" : "";
+const codeOf = (e, no) => `${e.date.slice(0, 4)} ${e.date.slice(5, 7)}${e.date.slice(8, 10)} ${String(no).padStart(4, "0")}`;
 function barcode(id){
   let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  let s = ""; for (let i = 0; i < 20; i++) { h = (h * 1103515245 + 12345) >>> 0; s += `<i style="width:${1 + (h >>> 16) % 3}px;margin-right:${1 + (h >>> 9) % 2}px"></i>`; }
+  let s = ""; for (let i = 0; i < 19; i++) { h = (h * 1103515245 + 12345) >>> 0; s += `<i style="width:${1 + (h >>> 16) % 3}px;margin-right:${1 + (h >>> 9) % 2}px"></i>`; }
   return s;
 }
 function stubHTML(e, opt = {}){
-  const no = String(serialOf(e.id)).padStart(3, "0"), [y, mo, d] = e.date.split("-");
-  const r = e.rating || 0;
-  return `<div class="stub-wrap${opt.stamp ? " stamping" : ""}" ${opt.click ? `data-entry="${e.id}" role="button" tabindex="0"` : ""}><div class="stub" style="--tint:${e.tint || "#fff1ea"};--acc:${e.accent || "#d9481c"}">
-    <div class="stub-main">
-      <img class="stub-p" src="${esc(e.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
-      <div class="stub-info">
-        <div class="stub-t">${esc(e.nm)}</div>${e.enm ? `<div class="stub-en">${esc(e.enm)}</div>` : ""}
-        <div class="stub-d"><b>${y}.${mo}.${d}</b><span>${wk(e.date)}</span></div>
-        <div class="stub-c">${esc([e.cinema, e.seat].filter(Boolean).join("  ") || "　")}</div>
-        ${e.note ? `<div class="stub-n">“${esc(e.note)}”</div>` : ""}
+  const o = opt.orient || S.orient, no = serialOf(e.id), sp = specialOf(no), [y, mo, d] = e.date.split("-"), r = e.rating || 0;
+  const stars = r ? "★".repeat(r) + "☆".repeat(5 - r) : "未评分";
+  const tailInner = o === "h"
+    ? `${sp ? `<div class="sp-tag">${SPECIAL[sp]}</div>` : `<div class="tl-k">NO.</div>`}<div class="tl-no">${String(no).padStart(3, "0")}</div>
+       <div class="tl-r${r ? "" : " no"}">${stars}</div><div class="bars">${barcode(e.id)}</div><div class="tl-code">${codeOf(e, no)}</div>`
+    : `<div class="tl-left">${sp ? `<div class="sp-tag">${SPECIAL[sp]}</div>` : `<div class="tl-k">NO.</div>`}<div class="tl-no">${String(no).padStart(3, "0")}</div></div>
+       <div class="tl-right"><div class="tl-r${r ? "" : " no"}">${stars}</div><div class="bars">${barcode(e.id)}</div><div class="tl-code">${codeOf(e, no)}</div></div>`;
+  return `<div class="stub-wrap${opt.stamp ? " stamping" : ""}" ${opt.click ? `data-entry="${e.id}" role="button" tabindex="0"` : ""}>
+    ${sp === "vellum" ? `<div class="vellum-under" style="background-image:url('${esc(e.img)}')"></div>` : ""}
+    <div class="stub ${o} g-${genreOf(e.cat)}${sp ? " sp-" + sp : ""}" style="--tint:${e.tint || "#fff1ea"};--acc:${e.accent || "#d9481c"}">
+      <div class="paper"></div>
+      <div class="stub-main">
+        <img class="stub-p" src="${esc(e.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
+        <div class="stub-info">
+          <div class="stub-t">${esc(e.nm)}</div>${e.enm ? `<div class="stub-en">${esc(e.enm)}</div>` : ""}
+          <div class="stub-d"><b>${y}.${mo}.${d}</b><span>${wk(e.date)}</span></div>
+          <div class="stub-c">${esc([e.cinema, e.seat].filter(Boolean).join("  ") || "　")}</div>
+          ${e.note ? `<div class="stub-n">“${esc(e.note)}”</div>` : ""}
+        </div>
       </div>
+      <div class="stub-tail">${tailInner}</div>
       <div class="stamp">已观影<small>${+mo}.${+d}</small></div>
-    </div>
-    <div class="stub-tail"><small>NO.</small><b>${no}</b>
-      <div class="stub-r${r ? "" : " no"}">${r ? "★".repeat(r) + "☆".repeat(5 - r) : "未评分"}</div>
-      <div class="bars">${barcode(e.id)}</div></div>
-  </div></div>`;
+      <div class="sheen"></div>
+    </div></div>`;
 }
+const segHTML = id => `<div class="seg" id="${id}"><button data-o="h" aria-pressed="${S.orient === "h"}">横版</button><button data-o="v" aria-pressed="${S.orient === "v"}">竖版</button></div>`;
 
 /* ---- 票夹页 ---- */
 function walletView(){
@@ -1007,25 +1143,43 @@ function walletView(){
     <div class="sec"><h3>成就</h3><span class="note">${un.size} / ${BADGES.length}</span><button class="sec-more" id="allBadges">全部</button></div>
     <div class="hscroll badges">${ordered.map(b => badgeHTML(b, s, un)).join("")}</div>`;
   const list = sortedDiary().reverse();
-  if (!list.length) return h + `<div class="wallet-empty"><div class="ghost-stub">你的第一张票根</div>看完一部电影，在电影页点"看过了，收进票夹"，<br>票根就会收进这里。</div>`;
+  if (!list.length) return h + `<div class="wallet-empty"><div class="ghost-stub">你的第一张票根</div>看完一部电影，在电影页点“看过了，收进票夹”，<br>票根就会收进这里。</div>`;
+  h += `<div class="sec"><h3>票根</h3><span class="note">${list.length} 张</span>${segHTML("walletSeg")}</div>`;
   let cur = "";
   for (const e of list) {
     const k = e.date.slice(0, 7);
     if (k !== cur) { if (cur) h += `</div>`; cur = k;
-      h += `<div class="sec"><h3>${+k.slice(0, 4) === todayYmd()[0] ? "" : k.slice(0, 4) + "年"}${+k.slice(5)}月</h3><span class="note">${list.filter(x => x.date.startsWith(k)).length} 部</span></div><div class="stubs">`; }
+      h += `<div class="sec" style="margin-top:18px"><h3 style="font-size:15px;color:var(--ink-2)">${+k.slice(0, 4) === todayYmd()[0] ? "" : k.slice(0, 4) + "年"}${+k.slice(5)}月</h3></div><div class="stubs${S.orient === "v" ? " vmode" : ""}">`; }
     h += stubHTML(e, {click: true});
   }
   h += `</div>`;
   if (!gh.token()) h += `<p class="hint">票根现在只存在这台手机上。在设置里连接 GitHub 后会自动备份，换手机也不会丢。</p>`;
   return h;
 }
+function bindSeg(id, after){
+  const seg = document.getElementById(id); if (!seg) return;
+  seg.querySelectorAll("button").forEach(b => b.onclick = ev => { ev.stopPropagation(); S.orient = b.dataset.o; setPref("orient", S.orient); after(); });
+}
+
+/* ---- 光泽随滑动流转 ---- */
+let sheenRAF = 0;
+function updateSheen(){
+  sheenRAF = 0;
+  document.querySelectorAll(".stub").forEach(el => {
+    const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+    el.style.setProperty("--sh", Math.max(0, Math.min(1, (r.top + r.height / 2) / innerHeight)).toFixed(3));
+  });
+}
+const queueSheen = () => { if (!sheenRAF) sheenRAF = requestAnimationFrame(updateSheen); };
+addEventListener("scroll", queueSheen, {passive: true});
+document.addEventListener("scroll", queueSheen, {passive: true, capture: true});
 
 /* ---- 记录观影 ---- */
 let REC = null;
 function openRecord(m){
   const today = new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Shanghai"});
   const opened = S.data.cinemas.filter(c => (m.opened || {})[String(c.id)]);
-  REC = {m, cinema: (opened[0] || S.data.cinemas[0] || {}).short || "", other: false, rating: 0};
+  REC = {m, cinema: (opened[0] || S.data.cinemas[0] || {}).short || "", other: false, rating: 0, look: null};
   const el = $("#rec");
   el.innerHTML = `<div class="rec-back"></div><div class="rec-panel" role="dialog" aria-label="记下这次观影">
     <div class="grab"></div><h3>记下这次观影</h3><p class="rec-mv">《${esc(m.nm)}》</p>
@@ -1039,6 +1193,7 @@ function openRecord(m){
     <label class="f"><span>一句话</span><input id="rNote" maxlength="40" placeholder="写点什么（选填）"></label>
     <button class="btn wide" id="rSave">收进票夹</button></div>`;
   el.classList.add("on");
+  tintOf(m.img).then(look => { REC.look = look; const p = el.querySelector(".rec-panel"); if (p) p.style.setProperty("--tint", look.tint); });
   el.querySelector(".rec-back").onclick = closeRecord;
   el.querySelectorAll("#rCine .chip").forEach(b => b.onclick = () => {
     el.querySelectorAll("#rCine .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
@@ -1047,7 +1202,8 @@ function openRecord(m){
   const words = ["", "不推荐", "一般", "还行", "推荐", "力荐"];
   el.querySelectorAll("#rStars button").forEach(b => b.onclick = () => {
     const v = +b.dataset.v; REC.rating = REC.rating === v ? 0 : v;
-    el.querySelectorAll("#rStars button").forEach(x => x.classList.toggle("on", +x.dataset.v <= REC.rating));
+    el.querySelectorAll("#rStars button").forEach(x => { const on = +x.dataset.v <= REC.rating; x.classList.toggle("on", on); x.classList.remove("pop");
+      if (on) { void x.offsetWidth; x.style.animationDelay = (+x.dataset.v - 1) * 40 + "ms"; x.classList.add("pop"); } });
     $("#rLab").textContent = REC.rating ? words[REC.rating] : "点星星打分";
   });
   $("#rSave").onclick = saveRecord;
@@ -1067,12 +1223,12 @@ async function tintOf(src){
     }
     r /= w * 255; g /= w * 255; b /= w * 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
-    let h = 0, sat = dd ? dd / (1 - Math.abs(2 * l - 1)) : 0;
+    let h = 0; const sat = dd ? dd / (1 - Math.abs(2 * l - 1)) : 0;
     if (dd) h = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
     h = Math.round((h * 60 + 360) % 360);
     const S1 = Math.round(Math.min(.75, Math.max(.32, sat)) * 100);
-    return {tint: `hsl(${h} ${S1}% 90%)`, accent: `hsl(${h} ${Math.min(80, S1 + 10)}% 38%)`};
-  } catch { return {tint: "#fff1ea", accent: "#d9481c"}; }
+    return {tint: `hsl(${h} ${S1}% 90%)`, accent: `hsl(${h} ${Math.min(80, S1 + 10)}% 38%)`, h, s: S1};
+  } catch { return {tint: "#fff1ea", accent: "#d9481c", h: 16, s: 90}; }
 }
 async function saveRecord(){
   const m = REC.m, btn = $("#rSave");
@@ -1080,7 +1236,7 @@ async function saveRecord(){
   const date = $("#rDate").value || new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Shanghai"});
   btn.disabled = true; btn.textContent = "正在制作票根…";
   const before = unlockedSet(diaryStats());
-  const look = await tintOf(m.img);
+  const look = REC.look || await tintOf(m.img);
   const e = {id: "w" + Date.now().toString(36), mid: m.id, nm: m.nm, enm: m.enm || "", img: m.img, rt: m.rt || "",
     cat: m.cat || "", src: m.src || "", dir: m.dir || "", dur: m.dur || null, date, cinema, seat: $("#rSeat").value.trim(),
     rating: REC.rating, note: $("#rNote").value.trim(), tint: look.tint, accent: look.accent,
@@ -1093,26 +1249,34 @@ async function saveRecord(){
   if (S.tab === "wallet") render();
 }
 
-/* ---- 票根展示 ---- */
+/* ---- 弹窗：票根 / 成就 ---- */
+function tintBack(e){
+  const back = $("#reveal .rv-back"); if (!back || !e) return;
+  const m = /hsl\((\d+) (\d+)%/.exec(e.tint || "");
+  if (m) { back.style.setProperty("--t1", `hsl(${m[1]} ${m[2]}% 86%)`); back.style.setProperty("--t2", `hsl(${(+m[1] + 40) % 360} ${m[2]}% 90%)`); }
+}
 function burst(){
   const cols = ["#ff6a3d", "#ffb020", "#1fa463", "#5b8def", "#e5484d", "#b26bff"];
-  return `<div class="burst">${Array.from({length: 26}, (_, i) => { const a = i / 26 * Math.PI * 2, d = 90 + Math.random() * 90;
-    return `<i style="background:${cols[i % cols.length]};--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 40}px;--r:${Math.random() * 540}deg;animation-delay:${.45 + Math.random() * .15}s"></i>`; }).join("")}</div>`;
+  return `<div class="burst">${Array.from({length: 28}, (_, i) => { const a = i / 28 * Math.PI * 2, d = 90 + Math.random() * 100;
+    return `<i style="background:${cols[i % cols.length]};--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 40}px;--r:${Math.random() * 540}deg;animation-delay:${.55 + Math.random() * .15}s"></i>`; }).join("")}</div>`;
 }
-function showReveal(e, fresh = null){
-  const isNew = fresh !== null, no = serialOf(e.id);
+function showReveal(e, fresh = null, keepAnim = true){
+  const isNew = fresh !== null, no = serialOf(e.id), sp = specialOf(no);
   const el = $("#reveal");
   el.innerHTML = `<div class="rv-back"></div><div class="rv-in">
-    <div class="rv-h"><b>${isNew ? "收进票夹啦" : esc(e.nm)}</b><span>${isNew ? `这是你的第 ${no} 张票根` : `第 ${no} 张票根`}</span></div>
-    ${stubHTML(e, {stamp: isNew})}${isNew && fresh.length ? burst() : ""}
-    ${isNew && fresh.length ? `<div class="rv-badges">${fresh.map((b, i) => `<div class="rv-badge" style="animation-delay:${.9 + i * .12}s"><span class="medal" style="--h:${b.h}">${b.e}</span><div><b>${b.n}<em>新成就</em></b><span>${b.d}</span></div></div>`).join("")}</div>` : ""}
+    <div class="rv-h"><b>${isNew ? (sp ? `第 ${no} 张，${SPECIAL[sp]}限定票根` : "收进票夹啦") : esc(e.nm)}</b>
+      <span>${isNew ? `这是你的第 ${no} 张票根` : `第 ${no} 张票根，${mdc(e.date)}`}</span><br>${segHTML("rvSeg")}</div>
+    <div class="rv-stub${S.orient === "v" ? " vmode" : ""}">${stubHTML(e, {stamp: isNew && keepAnim})}</div>${isNew && keepAnim && fresh.length ? burst() : ""}
+    ${isNew && fresh.length ? `<div class="rv-badges">${fresh.map((b, i) => `<div class="rv-badge" style="animation-delay:${keepAnim ? 1 + i * .15 : 0}s">${medal(b)}<div><b>${b.n}<em>新成就</em></b><span>${b.d}</span></div></div>`).join("")}</div>` : ""}
     <div class="rv-actions"><button class="btn ghost" id="rvSave">存为图片</button><button class="btn" id="rvOk">${isNew ? "好的" : "关闭"}</button></div>
     ${isNew ? "" : `<button class="rv-del" id="rvDel">删除这张票根</button>`}
   </div>`;
-  el.classList.add("on");
+  tintBack(e);
+  el.classList.add("on"); requestAnimationFrame(updateSheen);
   const close = () => el.classList.remove("on");
   el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
   $("#rvSave").onclick = () => saveStubImage(e);
+  bindSeg("rvSeg", () => { showReveal(e, fresh, false); if (S.tab === "wallet") render(); });
   const del = $("#rvDel");
   if (del) del.onclick = async () => {
     if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "再点一次确认删除"; return; }
@@ -1124,63 +1288,165 @@ function showReveal(e, fresh = null){
 function openBadges(){
   const s = diaryStats(), un = unlockedSet(s);
   const el = $("#reveal");
-  el.innerHTML = `<div class="rv-back"></div><div class="rv-in"><div class="rv-h"><b>成就</b><span>已解锁 ${un.size} / ${BADGES.length}</span></div>
+  el.innerHTML = `<div class="rv-back"></div><div class="rv-in"><div class="rv-h"><b>成就</b><span>已解锁 ${un.size} / ${BADGES.length}，点任意一个看怎么解锁</span></div>
     <div class="bgrid">${BADGES.map(b => badgeHTML(b, s, un, true)).join("")}</div>
     <div class="rv-actions"><button class="btn" id="rvOk">关闭</button></div></div>`;
   el.classList.add("on");
   const close = () => el.classList.remove("on");
   el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
+  el.querySelectorAll("[data-badge]").forEach(b => b.onclick = () => openBadge(b.dataset.badge, true));
+}
+function openBadge(k, fromAll){
+  const b = BADGES.find(x => x.k === k); if (!b) return;
+  const s = diaryStats(), un = unlockedSet(s), ok = un.has(k), [c, g] = b.p(s);
+  const el = $("#reveal");
+  el.innerHTML = `<div class="rv-back"></div><div class="rv-in"><div class="bdetail"><div class="badge${ok ? " ok" : ""}">${medal(b)}</div>
+      <h4>${b.n}</h4><p>${b.d}</p>
+      <div class="goal">${ok ? `<b class="done">已解锁</b><small>收藏党又进一步</small>`
+        : `<b>${esc(b.hint(s, c, g))}</b><small>进度 ${Math.min(c, g)} / ${g}</small><div class="pbar"><i style="width:${progress(b, s) * 100}%"></i></div>`}</div></div>
+    <div class="rv-actions">${fromAll ? `<button class="btn ghost" id="rvBack">全部成就</button>` : ""}<button class="btn" id="rvOk">好的</button></div></div>`;
+  const back = el.querySelector(".rv-back"); back.style.setProperty("--t1", `hsl(${b.h} 90% ${ok ? 85 : 93}%)`); back.style.setProperty("--t2", `hsl(${(b.h + 50) % 360} 80% 92%)`);
+  el.classList.add("on");
+  const close = () => el.classList.remove("on");
+  back.onclick = close; $("#rvOk").onclick = close;
+  const bb = $("#rvBack"); if (bb) bb.onclick = openBadges;
 }
 
-/* ---- 存为图片（canvas 重画一张高清票根） ---- */
-function rr(x, X, y, w, h, r){ x.beginPath(); x.moveTo(X + r, y); x.arcTo(X + w, y, X + w, y + h, r); x.arcTo(X + w, y + h, X, y + h, r); x.arcTo(X, y + h, X, y, r); x.arcTo(X, y, X + w, y, r); x.closePath(); }
+/* ---- 存为图片：用 canvas 重画一张带背景和投影的高清票根 ---- */
+const legacy = c => (c || "").replace(/hsl\((\d+) (\d+)% (\d+)%\)/, "hsl($1, $2%, $3%)");
+const hsla = (c, a) => { const m = /hsl\((\d+) (\d+)% (\d+)%\)/.exec(c || ""); return m ? `hsla(${m[1]}, ${m[2]}%, ${m[3]}%, ${a})` : `rgba(217,72,28,${a})`; };
 function fitText(x, t, maxW){ if (x.measureText(t).width <= maxW) return t; while (t.length && x.measureText(t + "…").width > maxW) t = t.slice(0, -1); return t + "…"; }
-async function stubCanvas(e){
-  const W = 1200, H = 520, T = 230, c = document.createElement("canvas"); c.width = W; c.height = H;
+function ticketPath(x, X, Y, w, h, r, orient, perf, nr){
+  x.beginPath(); x.moveTo(X + r, Y);
+  if (orient === "h") { x.lineTo(X + perf - nr, Y); x.arc(X + perf, Y, nr, Math.PI, 0, true); }
+  x.arcTo(X + w, Y, X + w, Y + h, r);
+  if (orient === "v") { x.lineTo(X + w, Y + perf - nr); x.arc(X + w, Y + perf, nr, -Math.PI / 2, Math.PI / 2, true); }
+  x.arcTo(X + w, Y + h, X, Y + h, r);
+  if (orient === "h") { x.lineTo(X + perf + nr, Y + h); x.arc(X + perf, Y + h, nr, 0, Math.PI, true); }
+  x.arcTo(X, Y + h, X, Y, r);
+  if (orient === "v") { x.lineTo(X, Y + perf + nr); x.arc(X, Y + perf, nr, Math.PI / 2, -Math.PI / 2, true); }
+  x.arcTo(X, Y, X + w, Y, r); x.closePath();
+}
+function paperTile(kind, color){
+  const t = document.createElement("canvas"), s = 28; t.width = t.height = s; const x = t.getContext("2d");
+  x.strokeStyle = x.fillStyle = color; x.lineWidth = 2;
+  if (kind === "fun") { x.beginPath(); x.arc(5, 5, 2.4, 0, Math.PI * 2); x.arc(19, 19, 2.4, 0, Math.PI * 2); x.fill(); }
+  else if (kind === "scifi") { x.beginPath(); x.moveTo(0, .5); x.lineTo(s, .5); x.moveTo(.5, 0); x.lineTo(.5, s); x.stroke(); }
+  else if (kind === "dark") { x.beginPath(); for (let i = -s; i < s * 2; i += 14) { x.moveTo(i, s); x.lineTo(i + s, 0); } x.stroke(); }
+  else if (kind === "action") { x.globalAlpha = .6; x.beginPath(); x.moveTo(0, s); x.lineTo(10, s); x.lineTo(s, 10); x.lineTo(s, 0); x.lineTo(18, 0); x.lineTo(0, 18); x.closePath(); x.fill(); }
+  else if (kind === "docu") { x.fillRect(0, 0, s, 2); }
+  else { x.beginPath(); [[4, 7], [15, 3], [22, 16], [9, 21], [18, 25]].forEach(([a, b]) => { x.moveTo(a, b); x.arc(a, b, 1.1, 0, Math.PI * 2); }); x.fill(); }
+  return t;
+}
+async function stubCanvas(e, orient){
+  const no = serialOf(e.id), sp = specialOf(no), H = orient === "h";
+  const TW = H ? 1200 : 640, TH = H ? 540 : 1180, M = 90;
+  const c = document.createElement("canvas"); c.width = TW + M * 2; c.height = TH + M * 2;
   const x = c.getContext("2d"), SANS = '-apple-system,"PingFang SC","Helvetica Neue",sans-serif', SERIF = '"Songti SC","STSong","Noto Serif CJK SC",serif';
-  const legacy = c2 => (c2 || "").replace(/hsl\((\d+) (\d+)% (\d+)%\)/, "hsl($1, $2%, $3%)");
-  const g = x.createLinearGradient(0, 0, W, H * .4); g.addColorStop(0, legacy(e.tint) || "#fff1ea"); g.addColorStop(.82, "#ffffff");
-  rr(x, 0, 0, W, H, 44); x.fillStyle = g; x.fill();
-  x.fillStyle = "rgba(255,255,255,.6)"; x.fillRect(W - T, 0, T, H);
-  try { const im = await loadImg(big(e.img, 480)); x.save(); rr(x, 44, 44, 288, 432, 20); x.clip(); x.drawImage(im, 44, 44, 288, 432); x.restore(); } catch {}
-  const L = 372, maxW = W - T - L - 150;
-  x.fillStyle = "#1c1d24"; x.font = `600 58px ${SERIF}`; x.textBaseline = "alphabetic";
-  const words = [...e.nm]; let line = "", lines = [];
-  for (const ch of words) { if (x.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch; }
-  lines.push(line); lines = lines.slice(0, 2); if (lines.length === 2) lines[1] = fitText(x, lines[1], maxW);
-  lines.forEach((l, i) => x.fillText(l, L, 112 + i * 70));
-  let y = 112 + (lines.length - 1) * 70;
-  if (e.enm) { x.font = `italic 28px "New York",Georgia,serif`; x.fillStyle = "#7c7f8c"; x.fillText(fitText(x, e.enm, maxW), L, y + 46); }
-  const [Y, M, D] = e.date.split("-");
-  x.font = `200 76px ${SANS}`; x.fillStyle = "#1c1d24"; x.fillText(`${Y}.${M}.${D}`, L, 382);
-  const dw = x.measureText(`${Y}.${M}.${D}`).width; x.font = `400 28px ${SANS}`; x.fillStyle = "#7c7f8c"; x.fillText(wk(e.date), L + dw + 14, 380);
-  x.font = `400 28px ${SANS}`; x.fillStyle = "#4b4d58"; x.fillText(fitText(x, [e.cinema, e.seat].filter(Boolean).join("  "), maxW + 100), L, 426);
-  if (e.note) { x.fillStyle = "#7c7f8c"; x.fillText(fitText(x, `“${e.note}”`, maxW + 100), L, 466); }
-  // 印章
-  x.save(); x.translate(W - T - 92, 100); x.rotate(-14 * Math.PI / 180); x.globalAlpha = .82;
-  x.strokeStyle = "#e5484d"; x.lineWidth = 5; x.beginPath(); x.arc(0, 0, 64, 0, Math.PI * 2); x.stroke();
-  x.lineWidth = 2; x.beginPath(); x.arc(0, 0, 55, 0, Math.PI * 2); x.stroke();
-  x.fillStyle = "#e5484d"; x.textAlign = "center"; x.font = `700 28px ${SANS}`; x.fillText("已观影", 0, 6); x.font = `500 20px ${SANS}`; x.fillText(`${+M}.${+D}`, 0, 34); x.restore();
+  const gold = sp === "gold", ink = gold ? "#ead2a0" : "#1c1d24", dim = gold ? "rgba(232,207,152,.72)" : "#7c7f8c", ink2 = gold ? "rgba(232,207,152,.85)" : "#4b4d58";
+  // 背景：海报主色的柔和渐变
+  const bg = x.createLinearGradient(0, 0, c.width, c.height);
+  bg.addColorStop(0, hsla(e.tint, 1)); bg.addColorStop(1, "#f6f6f9");
+  x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height);
+  const perf = H ? TW - 250 : TH - 220, nr = 24, R = 44, ox = M, oy = M;
+  // 投影 + 纸面
+  x.save(); ticketPath(x, ox, oy, TW, TH, R, orient, perf, nr);
+  x.shadowColor = "rgba(24,26,48,.20)"; x.shadowBlur = 60; x.shadowOffsetY = 26;
+  let fill;
+  if (sp === "holo") { fill = x.createLinearGradient(ox, oy, ox + TW, oy + TH); ["#ffe1f0", "#dcefff", "#e3fde0", "#fff3cc", "#ead9ff"].forEach((col, i) => fill.addColorStop(i / 4, col)); }
+  else if (gold) { fill = x.createRadialGradient(ox + TW * .15, oy, 10, ox + TW * .3, oy + TH * .3, TW); fill.addColorStop(0, "#2c2932"); fill.addColorStop(1, "#141318"); }
+  else if (sp === "vellum") { fill = "rgba(255,255,255,.62)"; }
+  else { fill = x.createLinearGradient(ox, oy, H ? ox + TW : ox, H ? oy + TH * .4 : oy + TH); fill.addColorStop(0, legacy(e.tint) || "#fff1ea"); fill.addColorStop(H ? .82 : .75, "#ffffff"); }
+  x.fillStyle = fill; x.fill(); x.restore();
+  x.save(); ticketPath(x, ox, oy, TW, TH, R, orient, perf, nr); x.clip();
+  // 类型纸纹
+  if (!gold) {
+    const pat = x.createPattern(paperTile(genreOf(e.cat), sp === "vellum" ? "rgba(24,26,48,.05)" : hsla(e.accent, .16)), "repeat");
+    x.fillStyle = pat; if (H) x.fillRect(ox + 360, oy, perf - 360, TH); else x.fillRect(ox, oy + 690, TW, perf - 690);
+  }
+  if (sp === "holo") { const s2 = x.createLinearGradient(ox, oy, ox + TW, oy + TH); s2.addColorStop(.42, "rgba(255,255,255,0)"); s2.addColorStop(.5, "rgba(255,255,255,.55)"); s2.addColorStop(.58, "rgba(255,255,255,0)"); x.fillStyle = s2; x.fillRect(ox, oy, TW, TH); }
+  // 副券底色
+  x.fillStyle = gold ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.55)";
+  if (H) x.fillRect(ox + perf, oy, TW - perf, TH); else x.fillRect(ox, oy + perf, TW, TH - perf);
+  // 海报
+  try {
+    const im = await loadImg(big(e.img, 480));
+    x.save(); x.shadowColor = "rgba(24,26,48,.25)"; x.shadowBlur = 24; x.shadowOffsetY = 10;
+    const [px, py, pw, ph] = H ? [ox + 44, oy + 45, 300, 450] : [ox + 40, oy + 40, TW - 80, 620];
+    const rr2 = (X1, Y1, w1, h1, r1) => { x.beginPath(); x.moveTo(X1 + r1, Y1); x.arcTo(X1 + w1, Y1, X1 + w1, Y1 + h1, r1); x.arcTo(X1 + w1, Y1 + h1, X1, Y1 + h1, r1); x.arcTo(X1, Y1 + h1, X1, Y1, r1); x.arcTo(X1, Y1, X1 + w1, Y1, r1); x.closePath(); };
+    rr2(px, py, pw, ph, 20); x.fillStyle = "#fff"; x.fill(); x.shadowColor = "transparent"; x.clip();
+    const sr = im.width / im.height, dr = pw / ph; let sw = im.width, sh = im.height, sx = 0, sy = 0;
+    if (sr > dr) { sw = im.height * dr; sx = (im.width - sw) / 2; } else { sh = im.width / dr; sy = 0; }
+    x.drawImage(im, sx, sy, sw, sh, px, py, pw, ph); x.restore();
+  } catch {}
+  // 文字
+  const [Y4, MM, DD] = e.date.split("-");
+  x.textBaseline = "alphabetic"; x.textAlign = "left";
+  if (H) {
+    const L = ox + 388, maxW = perf - 388 - 40;
+    x.fillStyle = ink; x.font = `600 60px ${SERIF}`;
+    let line = "", lines = [];
+    for (const ch of [...e.nm]) { if (x.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch; }
+    lines.push(line); lines = lines.slice(0, 2); if (lines.length === 2) lines[1] = fitText(x, lines[1], maxW);
+    lines.forEach((l, i) => x.fillText(l, L, oy + 118 + i * 72));
+    const y0 = oy + 118 + (lines.length - 1) * 72;
+    if (e.enm) { x.font = `italic 28px "New York",Georgia,serif`; x.fillStyle = dim; x.fillText(fitText(x, e.enm, maxW), L, y0 + 46); }
+    x.font = `300 46px ${SANS}`; x.fillStyle = ink; x.fillText(`${Y4}.${MM}.${DD}`, L, oy + 392);
+    const dw = x.measureText(`${Y4}.${MM}.${DD}`).width; x.font = `400 26px ${SANS}`; x.fillStyle = dim; x.fillText(wk(e.date), L + dw + 12, oy + 390);
+    x.font = `400 28px ${SANS}`; x.fillStyle = ink2; x.fillText(fitText(x, [e.cinema, e.seat].filter(Boolean).join("  "), maxW), L, oy + 438);
+    if (e.note) { x.fillStyle = dim; x.font = `400 26px ${SANS}`; x.fillText(fitText(x, `“${e.note}”`, maxW), L, oy + 480); }
+  } else {
+    const L = ox + 46, maxW = TW - 92;
+    x.fillStyle = ink; x.font = `600 50px ${SERIF}`; x.fillText(fitText(x, e.nm, maxW), L, oy + 730);
+    if (e.enm) { x.font = `italic 24px "New York",Georgia,serif`; x.fillStyle = dim; x.fillText(fitText(x, e.enm, maxW), L, oy + 772); }
+    x.font = `300 38px ${SANS}`; x.fillStyle = ink; x.fillText(`${Y4}.${MM}.${DD}`, L, oy + 836);
+    const dw = x.measureText(`${Y4}.${MM}.${DD}`).width; x.font = `400 22px ${SANS}`; x.fillStyle = dim; x.fillText(wk(e.date), L + dw + 10, oy + 834);
+    x.font = `400 24px ${SANS}`; x.fillStyle = ink2; x.fillText(fitText(x, [e.cinema, e.seat].filter(Boolean).join("  "), maxW), L, oy + 876);
+    if (e.note) { x.fillStyle = dim; x.font = `400 22px ${SANS}`; x.fillText(fitText(x, `“${e.note}”`, maxW), L, oy + 912); }
+  }
   // 撕票线
-  x.save(); x.setLineDash([12, 10]); x.strokeStyle = "rgba(24,26,48,.22)"; x.lineWidth = 3; x.beginPath(); x.moveTo(W - T, 34); x.lineTo(W - T, H - 34); x.stroke(); x.restore();
-  // 副券
-  const cx = W - T / 2; x.textAlign = "center";
-  x.font = `500 22px ${SANS}`; x.fillStyle = "#a9acb7"; x.fillText("NO.", cx, 168);
-  x.font = `200 92px ${SANS}`; x.fillStyle = legacy(e.accent) || "#d9481c"; x.fillText(String(serialOf(e.id)).padStart(3, "0"), cx, 258);
-  x.font = `400 26px ${SANS}`; x.fillStyle = e.rating ? "#ffb020" : "#a9acb7"; x.fillText(e.rating ? "★".repeat(e.rating) + "☆".repeat(5 - e.rating) : "未评分", cx, 312);
-  let h = 7; for (const ch of e.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  let bx = cx - 70; x.fillStyle = "rgba(28,29,36,.75)";
-  for (let i = 0; i < 20 && bx < cx + 70; i++) { h = (h * 1103515245 + 12345) >>> 0; const w = 2 + (h >>> 16) % 3 * 2; x.fillRect(bx, 350, w, 60); bx += w + 3 + (h >>> 9) % 2 * 2; }
-  x.font = `500 16px ${SANS}`; x.fillStyle = "#a9acb7"; x.fillText("电影雷达", cx, 446);
-  // 打孔
-  x.globalCompositeOperation = "destination-out";
-  [[W - T, 0], [W - T, H]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 20, 0, Math.PI * 2); x.fill(); });
+  x.save(); x.setLineDash([12, 10]); x.strokeStyle = gold ? "rgba(232,207,152,.35)" : "rgba(24,26,48,.2)"; x.lineWidth = 3; x.beginPath();
+  if (H) { x.moveTo(ox + perf, oy + 34); x.lineTo(ox + perf, oy + TH - 34); } else { x.moveTo(ox + 34, oy + perf); x.lineTo(ox + TW - 34, oy + perf); }
+  x.stroke(); x.restore();
+  // 副券内容
+  const accent = gold ? "#e8cf98" : legacy(e.accent) || "#d9481c", r = e.rating || 0;
+  const stars = r ? "★".repeat(r) + "☆".repeat(5 - r) : "未评分", code = codeOf(e, no);
+  const bars = (bx0, by, bw, bh) => { let h = 7; for (const ch of e.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let bx = bx0; x.fillStyle = gold ? "#d8b56c" : "rgba(28,29,36,.75)";
+    while (bx < bx0 + bw) { h = (h * 1103515245 + 12345) >>> 0; const w = 2 + (h >>> 16) % 3 * 2; if (bx + w > bx0 + bw) break; x.fillRect(bx, by, w, bh); bx += w + 3 + (h >>> 9) % 2 * 2; } };
+  if (H) {
+    const cx = ox + perf + (TW - perf) / 2; x.textAlign = "center";
+    x.font = `${sp ? 700 : 500} 20px ${SANS}`; x.fillStyle = sp ? accent : "#a9acb7"; x.fillText(sp ? SPECIAL[sp] : "NO.", cx, oy + 130);
+    x.font = `200 92px ${SANS}`; x.fillStyle = accent; x.fillText(String(no).padStart(3, "0"), cx, oy + 222);
+    x.font = `400 24px ${SANS}`; x.fillStyle = r ? "#ffb020" : "#a9acb7"; x.fillText(stars, cx, oy + 268);
+    bars(cx - 82, oy + 300, 164, 58);
+    x.font = `500 17px ${SANS}`; x.fillStyle = gold ? "rgba(232,207,152,.7)" : "#7c7f8c"; x.fillText(code, cx, oy + 386);
+    x.font = `500 15px ${SANS}`; x.fillStyle = gold ? "rgba(232,207,152,.5)" : "#a9acb7"; x.fillText("电影雷达", cx, oy + 470);
+  } else {
+    const ty = oy + perf; x.textAlign = "left";
+    x.font = `${sp ? 700 : 500} 18px ${SANS}`; x.fillStyle = sp ? accent : "#a9acb7"; x.fillText(sp ? SPECIAL[sp] : "NO.", ox + 46, ty + 70);
+    x.font = `200 84px ${SANS}`; x.fillStyle = accent; x.fillText(String(no).padStart(3, "0"), ox + 40, ty + 152);
+    x.textAlign = "right"; x.font = `400 22px ${SANS}`; x.fillStyle = r ? "#ffb020" : "#a9acb7"; x.fillText(stars, ox + TW - 46, ty + 70);
+    bars(ox + TW - 46 - 230, ty + 88, 230, 52);
+    x.font = `500 15px ${SANS}`; x.fillStyle = gold ? "rgba(232,207,152,.7)" : "#7c7f8c"; x.fillText(code, ox + TW - 46, ty + 166);
+    x.font = `500 14px ${SANS}`; x.fillStyle = gold ? "rgba(232,207,152,.5)" : "#a9acb7"; x.fillText("电影雷达", ox + TW - 46, ty + 192);
+  }
+  // 印章：压在撕票线上
+  const [sx2, sy2, sr2] = H ? [ox + perf - 64, oy + TH - 84, 60] : [ox + TW - 112, oy + perf - 26, 56];
+  x.save(); x.translate(sx2, sy2); x.rotate(-10 * Math.PI / 180); x.globalAlpha = .85;
+  if (!gold) x.globalCompositeOperation = "multiply";
+  const sc = gold ? "#d8b56c" : "#e5484d";
+  x.strokeStyle = sc; x.lineWidth = 5; x.beginPath(); x.arc(0, 0, sr2, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 2; x.beginPath(); x.arc(0, 0, sr2 - 9, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = sc; x.textAlign = "center"; x.font = `700 27px ${SANS}`; x.fillText("已观影", 0, 6); x.font = `500 19px ${SANS}`; x.fillText(`${+MM}.${+DD}`, 0, 33);
+  x.restore();
+  x.restore();
   return c;
 }
 async function saveStubImage(e){
   const btn = $("#rvSave"); if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
   try {
-    const c = await stubCanvas(e);
+    const c = await stubCanvas(e, S.orient);
     const blob = await new Promise(ok => c.toBlob(ok, "image/png"));
     const file = new File([blob], `票根-${e.nm}.png`, {type: "image/png"});
     if (navigator.canShare && navigator.canShare({files: [file]})) {
@@ -1196,7 +1462,7 @@ async function saveStubImage(e){
   if (btn) { btn.disabled = false; btn.textContent = "存为图片"; }
 }
 
-/* ---- 详情页里的入口 ---- */
+/* ---- 入口与点击 ---- */
 function watchCTA(m){
   const mine = S.diary.filter(e => String(e.mid) === String(m.id)).sort((a, b) => b.date.localeCompare(a.date));
   if (!mine.length) return `<div class="cta"><button class="rec-btn" data-rec="${m.id}">${IC.check}看过了，收进票夹</button></div>`;
@@ -1208,17 +1474,24 @@ document.getElementById("sheet").addEventListener("click", ev => {
   const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); }
 });
 document.getElementById("main").addEventListener("click", ev => {
+  if (ev.target.closest("#walletSeg")) return;
   const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); return; }
-  if (ev.target.closest("[data-badge]") || ev.target.closest("#allBadges")) openBadges();
+  const bd = ev.target.closest("[data-badge]"); if (bd) { openBadge(bd.dataset.badge); return; }
+  if (ev.target.closest("#allBadges")) openBadges();
 });
+const _render0 = render;
+render = function(){ _render0(); bindSeg("walletSeg", render); requestAnimationFrame(updateSheen); };
 
 /* ---------- 交互 ---------- */
 $("#main").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) openMovie(b.dataset.id); });
+function moveInd(){ const b = document.querySelector(".tabs button[aria-selected=true]"), ind = $("#tabInd"); if (!b) return;
+  ind.style.width = b.offsetWidth + "px"; ind.style.transform = `translateX(${b.offsetLeft}px)`; }
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   S.tab = b.dataset.tab; S.limit = 60; setPref("tab3", S.tab);
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
-  render(); window.scrollTo(0, 0);
+  moveInd(); render(); window.scrollTo(0, 0);
 });
+addEventListener("resize", moveInd);
 $("#searchBtn").onclick = () => { const on = !$("#searchbox").classList.contains("on");
   $("#searchbox").classList.toggle("on", on); $("#searchBtn").setAttribute("aria-pressed", on);
   if (on) $("#q").focus(); else { $("#q").value = ""; S.q = ""; render(); } };
@@ -1230,6 +1503,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && S.
 
 S.tab = getPref("tab3", "coming");
 document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === S.tab));
+moveInd(); requestAnimationFrame(moveInd);
 load();
 </script>
 </body>

@@ -113,6 +113,10 @@ main{padding:0 14px}
 .ev time{grid-row:span 2;font-family:var(--num);font-size:15px;color:var(--dim);padding-top:2px;min-width:54px;white-space:pre-line}
 .ev .tt{font-weight:600}
 .ev .bd{color:var(--dim);font-size:14px;white-space:pre-line}
+.ev.star{background:rgba(244,183,64,.09);border-radius:10px;border-bottom-color:transparent;margin:4px 0;
+  box-shadow:inset 3px 0 0 var(--amber);padding-left:12px}
+.ev.star .tt{color:var(--amber)}
+.ev.star .bd{color:var(--ink)}
 
 /* 数据来源状态 */
 .status{margin:26px 4px 10px;font-size:12px;color:var(--faint)}
@@ -372,8 +376,9 @@ function openedView(){
 }
 function feedView(){
   setPref("feedSeen", S.events[0] ? S.events[0].at : ""); delete $("#feedBadge").dataset.n;
-  if (!S.events.length) return `<p class="empty">还没有动态。关注的影院有新片开票，这里和你的手机都会收到提醒。</p>`;
-  return S.events.map(e => `<button class="ev" ${e.mid ? `data-id="${e.mid}"` : ""}>
+  if (!S.events.length) return `<p class="empty">还没有动态。影院有新片开票、电影开分都会列在这里，星标的会高亮并推送到手机。</p>`;
+  const stars = starIds();
+  return S.events.map(e => `<button class="ev${e.star || (e.mid && stars.has(String(e.mid))) ? " star" : ""}" ${e.mid ? `data-id="${e.mid}"` : ""}>
     <time>${esc(hm(e.at).replace(" ", "\n"))}</time><span class="tt">${esc(e.title)}</span><span class="bd">${esc(e.body)}</span></button>`).join("");
 }
 function statusView(){

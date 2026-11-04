@@ -156,8 +156,9 @@ class Radar:
         """评分优先刷新、开分要提醒的片子：已在关注影院开票的、关注列表里的。"""
         return self.opened_anywhere(mid) or self.watched(mid, r.get("nm"))
 
-    def event(self, kind, title, body, mid=None, cid=None):
-        e = {"at": NOW_S, "type": kind, "title": title, "body": body}
+    def event(self, kind, title, body, mid=None, cid=None, push=True, star=False):
+        """所有动态都记进网页的"动态"列表；push=True 的才推送到手机。"""
+        e = {"at": NOW_S, "type": kind, "title": title, "body": body, "push": push, "star": star}
         if mid:
             e["mid"] = mid
         if cid:
@@ -218,9 +219,11 @@ class Radar:
             mv.pop(mid, None)
         self.state["last"]["lists"] = NOW_S
         self.mark("maoyan", True, f"热映 {len(now)} 部 / 待映 {len(coming)} 部")
-        if self.state["bootstrapped"] and self.cfg["notify"].get("new_coming_movies"):
-            for rec in new_coming[:5]:
-                self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=str(rec["id"]))
+        if self.state["bootstrapped"]:
+            for rec in new_coming[:10]:
+                mid = str(rec["id"])
+                self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=mid,
+                           push=bool(self.cfg["notify"].get("new_coming_movies")), star=self.watched(mid, rec.get("nm")))
 
     # ------------------------------------------------------------ 猫眼详情（英文名、年份、简介等）
     def update_details(self, limit=6):
@@ -285,17 +288,17 @@ class Radar:
                 if len(rt) == 10 and rt < (NOW - timedelta(days=7)).date().isoformat():
                     reg.pop(mid)
             self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
-            if new and self.cfg["notify"].get("new_ticketing", True):
+            if new:
                 for mid, m, o in new:
-                    if self.ticket_mode == "starred" and not self.watched(mid, m["nm"]):
-                        continue
+                    star = self.watched(mid, m["nm"])
                     rt = (self.state["movies"].get(mid) or {}).get("rt")
                     body = f"《{m['nm']}》首场 {md(o['first'])}"
                     if rt and len(rt) == 10 and o["first"] != rt:
                         body += f"，{md(rt)}正式上映"
-                    if self.watched(mid, m["nm"]):
+                    if star:
                         body = "⭐ " + body
-                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid)
+                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
+                               push=self.ticket_mode == "all" or star, star=star)
             n_pre = sum(1 for mid in data["movies"] if mid in reg)
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
 
@@ -500,12 +503,10 @@ class Radar:
                 pv = (prev or {}).get(k)
                 merged[k] = True if (v is True or pv is True) else (v if v is not None else pv)
             scored[mid] = merged
-            if prev is None or mode == "off" or not st["bootstrapped"]:
+            if prev is None or not st["bootstrapped"]:
                 continue
-            relevant = (mode == "all" or self.watched(mid, r.get("nm"))
-                        or (mode == "opened" and self.opened_anywhere(mid)))
-            if not relevant:
-                continue
+            star = self.watched(mid, r.get("nm"))
+            push = mode != "off" and (mode == "all" or star or (mode == "opened" and self.opened_anywhere(mid)))
             parts = []
             if cur["douban"] and prev.get("douban") is False:
                 d = st["douban"][mid]
@@ -515,7 +516,8 @@ class Radar:
             if cur["rt"] and prev.get("rt") is False:
                 parts.append(f"烂番茄 {st['rt'][mid]['critics']}%")
             if parts:
-                self.event("score", "⭐ 开分了", f"《{r.get('nm')}》" + " / ".join(parts), mid=mid)
+                self.event("score", "📊 开分了", ("⭐ " if star else "") + f"《{r.get('nm')}》" + " / ".join(parts),
+                           mid=mid, push=push, star=star)
 
     # ------------------------------------------------------------ 输出
     def write_outputs(self):
@@ -588,15 +590,17 @@ class Radar:
 
     # ------------------------------------------------------------ 推送
     def send(self):
-        if not self.events:
-            return
-        url = site_url(self.cfg)
+        to_push = [e for e in self.events if e.get("push", True)
+                   and not (e["type"] == "ticketing" and not self.cfg["notify"].get("new_ticketing", True))]
         if self.args.dry_run:
             for e in self.events:
-                print(f"[dry-run] {e['title']} | {e['body']}")
+                print(f"[dry-run {'推送' if e in to_push else '只记录'}] {e['title']} | {e['body']}")
             return
+        if not to_push:
+            return
+        url = site_url(self.cfg)
         groups, mids = {}, {}
-        for e in self.events:
+        for e in to_push:
             groups.setdefault(e["title"], []).append(e["body"])
             mids.setdefault(e["title"], []).append(e.get("mid"))
         for i, (title, bodies) in enumerate(groups.items()):

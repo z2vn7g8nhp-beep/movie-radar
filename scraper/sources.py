@@ -20,7 +20,7 @@ class SourceError(Exception):
 
 def norm_name(s):
     """把片名标准化，用于在猫眼和淘票票之间配对。"""
-    s = (s or "").lower()
+    s = re.sub(r"[\u200b-\u200f\u202a-\u202e\u2060\ufeff]", "", (s or "")).lower()
     s = s.replace("&", "and")
     s = re.sub(r"[\s:：·・,，.。!！?？'\"“”‘’《》()（）\[\]【】\-—_/、~～]", "", s)
     return s
@@ -250,3 +250,133 @@ class IMDb:
                     rating, votes = rest.strip().split("\t")
                     out[tid] = [float(rating), int(votes)]
         return out
+
+
+# ---------------------------------------------------------------- Wikidata（IMDb 编号 → 烂番茄 / 豆瓣 编号）
+class Wikidata:
+    URL = "https://query.wikidata.org/sparql"
+
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({"User-Agent": "movie-radar/1.0 (personal, non-commercial)",
+                               "Accept": "application/sparql-results+json"})
+
+    def lookup(self, imdb_ids):
+        out = {}
+        ids = [i for i in imdb_ids if re.fullmatch(r"tt\d+", i or "")]
+        for i in range(0, len(ids), 120):
+            chunk = ids[i:i + 120]
+            values = " ".join(f'"{x}"' for x in chunk)
+            q = ("SELECT ?imdb ?rt ?db WHERE { VALUES ?imdb { %s } ?f wdt:P345 ?imdb . "
+                 "OPTIONAL { ?f wdt:P1258 ?rt } OPTIONAL { ?f wdt:P4529 ?db } }") % values
+            try:
+                r = self.s.get(self.URL, params={"query": q}, timeout=40)
+                rows = r.json()["results"]["bindings"]
+            except (requests.RequestException, ValueError, KeyError) as e:
+                raise SourceError(f"Wikidata 查询失败：{e.__class__.__name__}")
+            for row in rows:
+                d = out.setdefault(row["imdb"]["value"], {})
+                if "rt" in row and row["rt"]["value"].startswith("m/"):
+                    d.setdefault("rt", row["rt"]["value"])
+                if "db" in row:
+                    d.setdefault("douban", row["db"]["value"])
+        return out
+
+
+# ---------------------------------------------------------------- 豆瓣
+class Douban:
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({"User-Agent": UA, "Referer": "https://m.douban.com/movie/"})
+
+    def _json(self, url, params=None):
+        nap(0.8, 1.6)
+        try:
+            r = self.s.get(url, params=params, timeout=15)
+        except requests.RequestException as e:
+            raise SourceError(f"豆瓣连接失败：{e.__class__.__name__}")
+        if r.status_code in (403, 418, 429):
+            raise SourceError(f"豆瓣返回 HTTP {r.status_code}（被限流）")
+        try:
+            return r.json()
+        except ValueError:
+            raise SourceError("豆瓣返回的不是数据（可能要求登录或验证）")
+
+    def find(self, name, years):
+        """按中文片名 + 年份找豆瓣条目，片名要完全一致，年份差不超过 1 年。"""
+        items = self._json("https://movie.douban.com/j/subject_suggest", {"q": name})
+        target = norm_name(name)
+        best = None
+        for x in items if isinstance(items, list) else []:
+            if x.get("type") != "movie" or norm_name(x.get("title")) != target:
+                continue
+            y = int(x["year"]) if str(x.get("year", "")).isdigit() else None
+            if years and y and min(abs(y - yy) for yy in years) > 1:
+                continue
+            if best is None or (y and years and min(abs(y - yy) for yy in years) == 0):
+                best = x
+        return best["id"] if best else None
+
+    def rating(self, did):
+        d = self._json(f"https://m.douban.com/rexxar/api/v2/movie/{did}", {"ck": "", "for_mobile": 1})
+        if "title" not in d:
+            raise SourceError(f"豆瓣条目 {did} 无数据")
+        rt = d.get("rating") or {}
+        return {"sc": float(rt.get("value") or 0), "count": int(rt.get("count") or 0),
+                "reason": d.get("null_rating_reason") or "",
+                "url": f"https://m.douban.com/movie/subject/{did}/"}
+
+
+# ---------------------------------------------------------------- 烂番茄
+class RottenTomatoes:
+    BASE = "https://www.rottentomatoes.com"
+
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 "
+                                             "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"})
+
+    def _html(self, url, params=None):
+        nap(0.6, 1.2)
+        try:
+            r = self.s.get(url, params=params, timeout=20)
+        except requests.RequestException as e:
+            raise SourceError(f"烂番茄连接失败：{e.__class__.__name__}")
+        if r.status_code == 404:
+            return None
+        if r.status_code != 200:
+            raise SourceError(f"烂番茄返回 HTTP {r.status_code}")
+        return r.text
+
+    def find(self, title, years):
+        html = self._html(self.BASE + "/search", {"search": title})
+        if not html:
+            return None
+        target = norm_name(title)
+        for attrs, body in re.findall(r"<search-page-media-row([^>]*)>(.*?)</search-page-media-row>", html, re.S):
+            a = dict(re.findall(r'([a-z-]+)="([^"]*)"', attrs))
+            url = re.search(r'href="https://www\.rottentomatoes\.com/(m/[^"/?]+)', body)
+            name = re.search(r'data-qa="info-name"[^>]*>\s*([^<]+?)\s*<', body)
+            if not url or not name or norm_name(name.group(1)) != target:
+                continue
+            y = a.get("release-year")
+            if years and y and y.isdigit() and min(abs(int(y) - yy) for yy in years) > 1:
+                continue
+            return url.group(1)
+        return None
+
+    def scores(self, slug):
+        html = self._html(f"{self.BASE}/{slug}")
+        if html is None:
+            return None
+        m = re.search(r'<script[^>]*id="media-scorecard-json"[^>]*>(.*?)</script>', html, re.S)
+        if not m:
+            raise SourceError("烂番茄页面结构变了")
+        d = json.loads(m.group(1))
+
+        def pct(x):
+            v = (x or {}).get("scorePercent") or ""
+            return int(v.rstrip("%")) if v.rstrip("%").isdigit() else None
+        cs, aus = d.get("criticsScore") or {}, d.get("audienceScore") or {}
+        return {"critics": pct(cs), "criticsCount": cs.get("reviewCount") or cs.get("ratingCount"),
+                "audience": pct(aus), "url": f"{self.BASE}/{slug}"}

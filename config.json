@@ -19,8 +19,7 @@
   "watch": [],
   "notify": {
     "new_ticketing": true,
-    "new_dates_for_watched": true,
-    "score_open": "my_cinemas",
+    "score_open": "opened",
     "new_coming_movies": false
   },
   "imdb_overrides": {},

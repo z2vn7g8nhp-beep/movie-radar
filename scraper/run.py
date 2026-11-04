@@ -1,4 +1,8 @@
-"""电影雷达：每次运行抓取一轮数据，写到 docs/data/，发现开票等变化就推送。
+"""电影雷达：每次运行抓取一轮数据，写到 docs/data/，发现变化就推送。
+
+- 开票提醒：只看还没上映的片子，在关注影院第一次出现排片时提醒一次。
+- 评分：豆瓣、IMDb、烂番茄（专业 + 观众）。
+- 想看人数：猫眼、淘票票。
 
 用法：
   python scraper/run.py              正常运行（按间隔决定抓哪些）
@@ -16,7 +20,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sources import IMDb, Maoyan, SourceError, Taopiaopiao, norm_name  # noqa: E402
+from sources import (IMDb, Douban, Maoyan, RottenTomatoes, SourceError,  # noqa: E402
+                     Taopiaopiao, Wikidata, norm_name)
 import notify  # noqa: E402
 
 TZ = ZoneInfo("Asia/Shanghai")
@@ -63,6 +68,14 @@ def img(url, w=300):
     return url.replace("/w.h/", f"/{w}.{int(w * 1.4)}/")
 
 
+def md(d):
+    try:
+        x = datetime.fromisoformat(d)
+        return f"{x.month}月{x.day}日"
+    except (TypeError, ValueError):
+        return d or ""
+
+
 def site_url(cfg):
     if cfg.get("site_url"):
         return cfg["site_url"]
@@ -79,8 +92,9 @@ class Radar:
         self.args = args
         self.state = load_json(STATE_FILE, {})
         st = self.state
-        for k, v in {"version": 1, "bootstrapped": False, "last": {}, "movies": {}, "detail_at": {},
-                     "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "cinemas": {},
+        for k, v in {"version": 2, "bootstrapped": False, "last": {}, "movies": {}, "detail_at": {},
+                     "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "wiki_at": {},
+                     "douban": {}, "rt": {}, "opened": {}, "cinemas_ok": {},
                      "history": {}, "events": [], "scored": {}, "known": {}}.items():
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
@@ -111,8 +125,20 @@ class Radar:
                 return True
         return False
 
-    def at_my_cinemas(self, mid):
-        return any(mid in (c.get("movies") or {}) for c in self.state["cinemas"].values())
+    def opened_anywhere(self, mid):
+        return any(mid in o for o in self.state["opened"].values())
+
+    def unreleased(self, mid):
+        """还没上映：上映日期是今天及以后；没有具体日期的看是否在猫眼待映列表里。"""
+        r = self.state["movies"].get(mid) or {}
+        rt = r.get("rt") or ""
+        if len(rt) == 10:
+            return rt >= TODAY
+        return r.get("status") == "coming"
+
+    def important(self, mid, r):
+        """评分优先刷新、开分要提醒的片子：已在关注影院开票的、关注列表里的。"""
+        return self.opened_anywhere(mid) or self.watched(mid, r.get("nm"))
 
     def event(self, kind, title, body, mid=None, cid=None):
         e = {"at": NOW_S, "type": kind, "title": title, "body": body}
@@ -122,7 +148,26 @@ class Radar:
             e["cid"] = cid
         self.events.append(e)
 
-    # ------------------------------------------------------------ 猫眼列表 + 详情
+    @staticmethod
+    def en_name(r):
+        return (r.get("enm") or r.get("enm_tpp") or "").strip()
+
+    @staticmethod
+    def years_of(r):
+        if r.get("years"):
+            return r["years"]
+        return [int(r["rt"][:4])] if (r.get("rt") or "")[:4].isdigit() else []
+
+    def live(self):
+        return [(mid, r) for mid, r in self.state["movies"].items() if r.get("status") in ("now", "coming")]
+
+    def priority(self, item):
+        mid, r = item
+        return (not self.important(mid, r), r.get("status") != "coming",
+                (r.get("rt") or "9999") if r.get("status") == "coming" else "",
+                r.get("rank", 999))
+
+    # ------------------------------------------------------------ 猫眼列表
     def update_lists(self):
         mv = self.state["movies"]
         try:
@@ -142,12 +187,9 @@ class Radar:
                 rec.update({
                     "nm": m.get("nm"), "img": m.get("img") or rec.get("img"),
                     "rt": m.get("rt") or rec.get("rt"), "star": m.get("star") or rec.get("star"),
-                    "status": status, "showst": m.get("showst"),
-                    "ver": m.get("version") or m.get("ver") or rec.get("ver"),
-                    "listed_at": NOW_S, "rank": rank, "showInfo": m.get("showInfo") or "",
+                    "status": status, "ver": m.get("version") or m.get("ver") or rec.get("ver"),
+                    "listed_at": NOW_S, "rank": rank, "wish_my": m.get("wish") or 0,
                 })
-                rec.setdefault("maoyan", {})
-                rec["maoyan"].update({"sc": float(m.get("sc") or 0), "wish": m.get("wish") or 0})
                 if mid not in known:
                     known[mid] = NOW_S
                     if status == "coming":
@@ -155,33 +197,25 @@ class Radar:
         for mid, rec in mv.items():
             if mid not in seen and rec.get("status") in ("now", "coming"):
                 rec["status"] = "gone"
-        # 太久不出现的片子从状态里清掉
         for mid in [k for k, r in mv.items() if r.get("status") == "gone"
-                    and ago(r.get("listed_at")) > timedelta(days=14) and not self.at_my_cinemas(k)]:
+                    and ago(r.get("listed_at")) > timedelta(days=14)]:
             mv.pop(mid, None)
         self.state["last"]["lists"] = NOW_S
         self.mark("maoyan", True, f"热映 {len(now)} 部 / 待映 {len(coming)} 部")
-
         if self.state["bootstrapped"] and self.cfg["notify"].get("new_coming_movies"):
             for rec in new_coming[:5]:
                 self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=str(rec["id"]))
 
+    # ------------------------------------------------------------ 猫眼详情（英文名、年份、简介等）
     def update_details(self, limit=6):
         """猫眼详情接口连续调用 10 次左右就会被限流，所以每轮只补几部，慢慢补全。"""
-        mv = self.state["movies"]
         at = self.state["detail_at"]
-
-        def need(mid, r):
-            age = ago(at.get(mid))
-            ttl = timedelta(hours=12 if r.get("status") == "now" else 48)
-            return r.get("status") != "gone" and age > ttl
-
-        cands = [(mid, r) for mid, r in mv.items() if need(mid, r)]
-        cands.sort(key=lambda x: (not self.at_my_cinemas(x[0]), x[1].get("status") != "now",
-                                  -(x[1].get("maoyan", {}).get("wish") or 0)))
-        done = 0
+        cands = [x for x in self.live()
+                 if ago(at.get(x[0])) > timedelta(hours=24 if x[1].get("status") == "coming" else 72)]
+        cands.sort(key=self.priority)
         if self.args.force:
             limit = max(limit, 9)
+        done = 0
         for mid, r in cands[:limit]:
             try:
                 d = self.my.detail(mid)
@@ -193,22 +227,18 @@ class Radar:
             r.update({
                 "enm": d.get("enm"), "cat": d.get("cat"), "dir": d.get("dir"), "star": d.get("star") or r.get("star"),
                 "dur": d.get("dur"), "src": d.get("src"), "dra": d.get("dra"), "pubDesc": d.get("pubDesc"),
-                "ver": d.get("ver") or r.get("ver"), "years": years, "oriLang": d.get("oriLang"),
+                "ver": d.get("ver") or r.get("ver"), "years": years,
                 "video": d.get("videourl") or None, "img": d.get("img") or r.get("img"),
-            })
-            r.setdefault("maoyan", {}).update({
-                "sc": float(d.get("sc") or 0), "wish": d.get("wish") or r["maoyan"].get("wish") or 0,
-                "snum": d.get("snum") or 0, "watched": d.get("watched") or 0,
-                "label": d.get("scoreLabel") or "",
+                "wish_my": d.get("wish") or r.get("wish_my") or 0,
             })
             at[mid] = NOW_S
             done += 1
         if done:
-            print(f"  更新详情 {done} 部（剩余 {max(0, len(cands) - done)} 部下次再取）")
+            print(f"  猫眼详情 {done} 部（还有 {max(0, len(cands) - done)} 部待补）")
 
-    # ------------------------------------------------------------ 影院排片（开票检测）
+    # ------------------------------------------------------------ 影院：只盯未上映影片的首次开票
     def update_cinemas(self):
-        notify_cfg = self.cfg["notify"]
+        opened = self.state["opened"]
         for c in self.cfg["cinemas"]:
             cid = str(c["id"])
             try:
@@ -216,54 +246,42 @@ class Radar:
             except SourceError as e:
                 self.mark(f"cinema:{cid}", False, str(e))
                 continue
-            old = self.state["cinemas"].get(cid, {})
-            old_movies = old.get("movies", {})
-            new_movies = {}
-            opened = []
+            reg = opened.setdefault(cid, {})
+            first_time = not self.state["cinemas_ok"].get(cid)
+            new = []
             for mid, m in data["movies"].items():
+                if mid in reg:
+                    continue
+                # 列表里没有的片子先补一条最基本的记录
+                self.state["movies"].setdefault(mid, {"id": int(mid), "nm": m["nm"], "img": m["img"],
+                                                      "status": "now", "listed_at": NOW_S,
+                                                      "wish_my": m.get("wish") or 0})
+                if not self.unreleased(mid):
+                    continue  # 已上映的片子不管
                 dates = [d["date"] for d in m["days"]]
-                prev = old_movies.get(mid)
-                new_movies[mid] = {
-                    "nm": m["nm"], "img": m["img"], "desc": m["desc"], "sc": m["sc"], "wish": m["wish"],
-                    "dates": dates, "count": sum(len(d["shows"]) for d in m["days"]),
-                    "days": m["days"], "seen": NOW_S,
-                    # 首次运行时已经在排片的片子不算"新开票"，first 留空
-                    "first": prev.get("first", "") if prev else (NOW_S if old.get("ok_once") else ""),
-                }
-                # 列表里没有的片子（特殊场次、重映）也补进电影库
-                rec = self.state["movies"].setdefault(mid, {"id": int(mid), "nm": m["nm"], "img": m["img"],
-                                                             "status": "now", "listed_at": NOW_S,
-                                                             "maoyan": {"sc": m["sc"], "wish": m["wish"] or 0}})
-                if rec.get("status") == "gone":
-                    rec["status"] = "now"
-                    rec["listed_at"] = NOW_S
-                if not prev and old.get("ok_once"):
-                    opened.append(new_movies[mid])
-                    new_movies[mid]["mid"] = mid
-                elif prev and self.watched(mid, m["nm"]) and notify_cfg.get("new_dates_for_watched"):
-                    added = sorted(set(dates) - set(prev.get("dates") or []))
-                    if added:
-                        self.event("dates", f"📅 {c['short']} 加场",
-                                   f"《{m['nm']}》新增 {'、'.join(md(d) for d in added)} 的场次", mid=mid, cid=cid)
-            # 暂时没出现的片子保留 3 天，防止接口偶尔漏数据导致重复提醒
-            for mid, pm in old_movies.items():
-                if mid not in new_movies and ago(pm.get("seen")) < timedelta(days=3):
-                    new_movies[mid] = {**pm, "days": [], "dates": [], "count": 0, "gone": True}
-            if opened and notify_cfg.get("new_ticketing", True):
-                for m in opened:
-                    first_day = md(m["dates"][0]) if m["dates"] else ""
-                    body = f"《{m['nm']}》{first_day}起 · 已排 {m['count']} 场"
-                    if self.watched(m["mid"], m["nm"]):
+                reg[mid] = {"at": "" if first_time else NOW_S, "first": dates[0] if dates else "",
+                            "count": sum(len(d["shows"]) for d in m["days"])}
+                if not first_time:
+                    new.append((mid, m, reg[mid]))
+            # 上映超过 7 天的从登记表里清掉
+            for mid in list(reg):
+                rt = (self.state["movies"].get(mid) or {}).get("rt") or ""
+                if len(rt) == 10 and rt < (NOW - timedelta(days=7)).date().isoformat():
+                    reg.pop(mid)
+            self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
+            if new and self.cfg["notify"].get("new_ticketing", True):
+                for mid, m, o in new:
+                    rt = (self.state["movies"].get(mid) or {}).get("rt")
+                    body = f"《{m['nm']}》首场 {md(o['first'])}"
+                    if rt and len(rt) == 10 and o["first"] != rt:
+                        body += f"，{md(rt)}正式上映"
+                    if self.watched(mid, m["nm"]):
                         body = "⭐ " + body
-                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=m["mid"], cid=cid)
-            self.state["cinemas"][cid] = {
-                "name": data["name"] or c["name"], "addr": data["addr"], "lat": data["lat"], "lng": data["lng"],
-                "movies": new_movies, "at": NOW_S, "ok_once": True,
-            }
-            n_live = sum(1 for m in new_movies.values() if not m.get("gone"))
-            self.mark(f"cinema:{cid}", True, f"{n_live} 部在排片" + (f"，新开票 {len(opened)} 部" if opened else ""))
+                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid)
+            n_pre = sum(1 for mid in data["movies"] if mid in reg)
+            self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
 
-    # ------------------------------------------------------------ 淘票票
+    # ------------------------------------------------------------ 淘票票：只取想看人数
     def update_tpp(self):
         try:
             lst = self.tpp.now_showing() + self.tpp.coming()
@@ -274,22 +292,19 @@ class Radar:
         for x in lst:
             b = Taopiaopiao.brief(x)
             idx.setdefault(norm_name(b["name"]), b)
-        matched = 0
-        missing = []
-        for mid, r in self.state["movies"].items():
-            if r.get("status") == "gone":
-                continue
+        matched, missing = 0, []
+        for mid, r in self.live():
             b = idx.get(norm_name(r.get("nm")))
             if b:
-                r["tpp"] = {**b, "at": NOW_S}
+                r["tpp"] = {"wish": b["wish"], "url": b["url"], "at": NOW_S}
+                if b.get("nameEn"):
+                    r["enm_tpp"] = b["nameEn"]
                 matched += 1
             else:
                 missing.append((mid, r))
-        # 列表里没配上的，对重要的片子用关键词搜一下（每次最多 6 部，轮换）
         kw = self.state["tpp_kw"]
-        missing = [x for x in missing if self.at_my_cinemas(x[0]) or self.watched(x[0], x[1].get("nm"))
-                   or x[1].get("status") == "now"]
-        missing.sort(key=lambda x: kw.get(x[0], ""))
+        missing = [x for x in missing if self.important(*x) or x[1].get("status") == "coming"]
+        missing.sort(key=lambda x: (not self.important(*x), kw.get(x[0], "")))
         searched = 0
         for mid, r in missing[:6]:
             kw[mid] = NOW_S
@@ -299,24 +314,24 @@ class Radar:
                 break
             searched += 1
             if hit and norm_name(hit.get("showName")) == norm_name(r.get("nm")):
-                r["tpp"] = {**Taopiaopiao.brief(hit), "at": NOW_S}
+                b = Taopiaopiao.brief(hit)
+                r["tpp"] = {"wish": b["wish"], "url": b["url"], "at": NOW_S}
                 matched += 1
         self.state["last"]["tpp"] = NOW_S
         self.mark("tpp", True, f"配上 {matched} 部" + (f"（另搜索 {searched} 部）" if searched else ""))
 
     # ------------------------------------------------------------ IMDb
     def update_imdb(self):
-        mv = self.state["movies"]
         mp = self.state["imdb_map"]
         overrides = self.cfg.get("imdb_overrides") or {}
         looked = 0
         try:
-            for mid, r in mv.items():
+            for mid, r in sorted(self.live(), key=self.priority):
                 ov = overrides.get(mid) or overrides.get(r.get("nm") or "")
                 if ov:
                     mp[mid] = {"id": ov, "at": NOW_S}
                     continue
-                if r.get("status") == "gone" or not r.get("enm"):
+                if not self.en_name(r):
                     continue
                 cur = mp.get(mid)
                 if cur and (cur.get("id") or ago(cur.get("at")) < timedelta(days=3)):
@@ -324,59 +339,163 @@ class Radar:
                 if looked >= 30:
                     continue
                 tid = None
-                for name in [x.strip() for x in r["enm"].split(",") if x.strip()][:3]:
-                    tid = self.imdb.find(name, r.get("years") or [])
+                for name in [x.strip() for x in self.en_name(r).split(",") if x.strip()][:3]:
+                    tid = self.imdb.find(name, self.years_of(r))
                     if tid:
                         break
                 mp[mid] = {"id": tid, "at": NOW_S}
                 looked += 1
             ids = {v["id"] for v in mp.values() if v.get("id")}
             lm = self.imdb.last_modified()
-            have = self.state["imdb_ratings"]
-            if lm != self.state["last"].get("imdb_lastmod") or any(i not in have for i in ids):
-                rt = self.imdb.ratings(ids)
-                self.state["imdb_ratings"] = rt
+            if lm != self.state["last"].get("imdb_lastmod") or any(i not in self.state["imdb_ratings"] for i in ids):
+                self.state["imdb_ratings"] = self.imdb.ratings(ids)
                 self.state["last"]["imdb_lastmod"] = lm
         except Exception as e:  # noqa: BLE001
             self.mark("imdb", False, f"{e.__class__.__name__}: {str(e)[:60]}")
             return
         self.state["last"]["imdb"] = NOW_S
-        self.mark("imdb", True, f"已匹配 {len(ids)} 部（评分数据 {lm or '未知'}）")
+        self.mark("imdb", True, f"已匹配 {len(ids)} 部")
+
+    # ------------------------------------------------------------ Wikidata：用 IMDb 编号找豆瓣、烂番茄条目
+    def update_wikidata(self):
+        mp, wat = self.state["imdb_map"], self.state["wiki_at"]
+        todo = {}
+        for mid, v in mp.items():
+            tid = v.get("id")
+            if not tid or ago(wat.get(mid)) < timedelta(days=3):
+                continue
+            if (self.state["douban"].get(mid) or {}).get("id") and (self.state["rt"].get(mid) or {}).get("id"):
+                continue
+            todo[tid] = mid
+        if not todo:
+            return
+        batch = list(todo.items())[:120]
+        try:
+            res = Wikidata().lookup([t for t, _ in batch])
+        except SourceError as e:
+            print(f"  {e}")
+            return
+        for tid, mid in batch:
+            wat[mid] = NOW_S
+            hit = res.get(tid) or {}
+            if hit.get("douban") and not (self.state["douban"].get(mid) or {}).get("id"):
+                self.state["douban"][mid] = {"id": hit["douban"], "at": ""}
+            if hit.get("rt") and not (self.state["rt"].get(mid) or {}).get("id"):
+                self.state["rt"][mid] = {"id": hit["rt"], "at": ""}
+
+    # ------------------------------------------------------------ 豆瓣
+    def update_douban(self, find_cap=8, fetch_cap=8):
+        db = Douban()
+        store = self.state["douban"]
+        items = sorted(self.live(), key=self.priority)
+        found = fetched = 0
+        try:
+            for mid, r in items:
+                if found >= find_cap:
+                    break
+                cur = store.get(mid)
+                if cur and (cur.get("id") or ago(cur.get("tried")) < timedelta(days=2)):
+                    continue
+                if not r.get("nm"):
+                    continue
+                did = db.find(r["nm"], self.years_of(r))
+                store[mid] = {"id": did, "tried": NOW_S, "at": ""}
+                found += 1
+
+            def ttl(mid, r):
+                return timedelta(hours=2 if self.important(mid, r) else 8)
+            due = [(mid, r) for mid, r in items if (store.get(mid) or {}).get("id")
+                   and ago(store[mid].get("at")) > ttl(mid, r)]
+            due.sort(key=lambda x: (not self.important(*x), store[x[0]].get("at") or ""))
+            for mid, r in due[:fetch_cap]:
+                store[mid].update(db.rating(store[mid]["id"]))
+                store[mid]["at"] = NOW_S
+                fetched += 1
+        except SourceError as e:
+            self.mark("douban", False, str(e))
+            return
+        have = sum(1 for v in store.values() if v.get("sc"))
+        self.mark("douban", True, f"有分 {have} 部" + (f"，本轮更新 {fetched} 部" if fetched else ""))
+
+    # ------------------------------------------------------------ 烂番茄
+    def update_rt(self, find_cap=5, fetch_cap=6):
+        rtc = RottenTomatoes()
+        store = self.state["rt"]
+        items = sorted(self.live(), key=self.priority)
+        found = fetched = 0
+        try:
+            for mid, r in items:
+                if found >= find_cap:
+                    break
+                cur = store.get(mid)
+                if cur and (cur.get("id") or ago(cur.get("tried")) < timedelta(days=3)):
+                    continue
+                enm = self.en_name(r).split(",")[0].strip()
+                # 烂番茄基本只收录外语片；没有英文名、或纯国产片就不搜了
+                if not enm or (r.get("src") or "").startswith(("中国大陆", "中国香港", "中国台湾")):
+                    continue
+                slug = rtc.find(enm, self.years_of(r))
+                store[mid] = {"id": slug, "tried": NOW_S, "at": ""}
+                found += 1
+
+            def ttl(mid, r):
+                return timedelta(hours=4 if self.important(mid, r) else 12)
+            due = [(mid, r) for mid, r in items if (store.get(mid) or {}).get("id")
+                   and ago(store[mid].get("at")) > ttl(mid, r)]
+            due.sort(key=lambda x: (not self.important(*x), store[x[0]].get("at") or ""))
+            for mid, r in due[:fetch_cap]:
+                sc = rtc.scores(store[mid]["id"])
+                if sc is None:
+                    store[mid] = {"id": None, "tried": NOW_S, "at": ""}
+                    continue
+                store[mid].update(sc)
+                store[mid]["at"] = NOW_S
+                fetched += 1
+        except SourceError as e:
+            self.mark("rt", False, str(e))
+            return
+        have = sum(1 for v in store.values() if v.get("critics") is not None or v.get("audience") is not None)
+        self.mark("rt", True, f"有分 {have} 部" + (f"，本轮更新 {fetched} 部" if fetched else ""))
 
     # ------------------------------------------------------------ 开分提醒
+    def ratings_of(self, mid):
+        """None = 这个来源还没配上这部片（或还没取过分）；False = 配上了但没分；True = 有分。"""
+        st = self.state
+        imdb_id = (st["imdb_map"].get(mid) or {}).get("id")
+        db = st["douban"].get(mid) or {}
+        rt = st["rt"].get(mid) or {}
+        return {
+            "douban": (db.get("sc", 0) > 0) if db.get("id") and db.get("at") else None,
+            "imdb": (imdb_id in st["imdb_ratings"]) if imdb_id else None,
+            "rt": (rt.get("critics") is not None) if rt.get("id") and rt.get("at") else None,
+        }
+
     def check_scores(self):
-        mode = self.cfg["notify"].get("score_open", "my_cinemas")
+        mode = self.cfg["notify"].get("score_open", "opened")
         scored = self.state["scored"]
-        ratings = self.state["imdb_ratings"]
-        for mid, r in self.state["movies"].items():
-            if r.get("status") == "gone":
-                continue
-            imdb_id = (self.state["imdb_map"].get(mid) or {}).get("id")
-            # None = 这个来源还没配上这部片；False = 配上了但还没分；True = 有分
-            cur = {
-                "my": (r.get("maoyan") or {}).get("sc", 0) > 0,
-                "tpp": ((r.get("tpp") or {}).get("sc", 0) > 0) if r.get("tpp") else None,
-                "imdb": (imdb_id in ratings) if imdb_id else None,
-            }
+        st = self.state
+        for mid, r in self.live():
+            cur = self.ratings_of(mid)
             prev = scored.get(mid)
             merged = {}
             for k, v in cur.items():
                 pv = (prev or {}).get(k)
                 merged[k] = True if (v is True or pv is True) else (v if v is not None else pv)
             scored[mid] = merged
-            if prev is None or mode == "off" or not self.state["bootstrapped"]:
+            if prev is None or mode == "off" or not st["bootstrapped"]:
                 continue
             relevant = (mode == "all" or self.watched(mid, r.get("nm"))
-                        or (mode == "my_cinemas" and self.at_my_cinemas(mid)))
+                        or (mode == "opened" and self.opened_anywhere(mid)))
             if not relevant:
                 continue
             parts = []
-            if cur["my"] and prev.get("my") is False:
-                parts.append(f"猫眼 {r['maoyan']['sc']:.1f}")
-            if cur["tpp"] and prev.get("tpp") is False:
-                parts.append(f"淘票票 {r['tpp']['sc']:.1f}")
+            if cur["douban"] and prev.get("douban") is False:
+                d = st["douban"][mid]
+                parts.append(f"豆瓣 {d['sc']:.1f}（{d['count']} 人评）")
             if cur["imdb"] and prev.get("imdb") is False:
-                parts.append(f"IMDb {ratings[imdb_id][0]:.1f}")
+                parts.append(f"IMDb {st['imdb_ratings'][st['imdb_map'][mid]['id']][0]:.1f}")
+            if cur["rt"] and prev.get("rt") is False:
+                parts.append(f"烂番茄 {st['rt'][mid]['critics']}%")
             if parts:
                 self.event("score", "⭐ 开分了", f"《{r.get('nm')}》" + " / ".join(parts), mid=mid)
 
@@ -387,69 +506,65 @@ class Radar:
         day = hist.setdefault(TODAY, {})
         prev_days = sorted(d for d in hist if d < TODAY)
         yday = hist.get(prev_days[-1], {}) if prev_days else {}
-        ratings = st["imdb_ratings"]
         cinema_ids = [str(c["id"]) for c in self.cfg["cinemas"]]
         movies = []
-        for mid, r in st["movies"].items():
-            here = {cid: st["cinemas"].get(cid, {}).get("movies", {}).get(mid) for cid in cinema_ids}
-            here = {k: v for k, v in here.items() if v and not v.get("gone")}
-            if r.get("status") == "gone" and not here:
-                continue
-            my = r.get("maoyan") or {}
+        for mid, r in self.live():
             tp = r.get("tpp") or {}
-            day[mid] = [my.get("wish") or 0, tp.get("wish") or 0]
+            wm, wt = r.get("wish_my") or 0, tp.get("wish") or 0
+            day[mid] = [wm, wt]
             y = yday.get(mid)
             imdb_id = (st["imdb_map"].get(mid) or {}).get("id")
-            rt = ratings.get(imdb_id) if imdb_id else None
+            ir = st["imdb_ratings"].get(imdb_id) if imdb_id else None
+            db = st["douban"].get(mid) or {}
+            rt = st["rt"].get(mid) or {}
+            opened = {cid: st["opened"][cid][mid] for cid in cinema_ids if mid in st["opened"].get(cid, {})}
             movies.append({
-                "id": r["id"], "nm": r.get("nm"), "enm": r.get("enm"), "img": img(r.get("img")),
-                "rt": r.get("rt"), "status": "now" if r.get("status") == "gone" else r.get("status"),
-                "showst": r.get("showst"), "ver": r.get("ver"), "cat": r.get("cat"), "dir": r.get("dir"),
-                "star": r.get("star"), "dur": r.get("dur"), "src": r.get("src"), "dra": r.get("dra"),
-                "pubDesc": r.get("pubDesc"), "video": r.get("video"),
-                "rank": r.get("rank", 999), "showInfo": r.get("showInfo", ""),
-                "maoyan": {"sc": my.get("sc", 0), "wish": my.get("wish", 0), "snum": my.get("snum", 0),
-                           "watched": my.get("watched", 0), "label": my.get("label", ""),
-                           "url": f"https://m.maoyan.com/movie/{r['id']}"},
-                "tpp": ({"sc": tp.get("sc", 0), "wish": tp.get("wish", 0), "scCount": tp.get("scCount", 0),
-                         "url": tp.get("url")} if tp else None),
-                "imdb": ({"id": imdb_id, "sc": rt[0] if rt else None, "votes": rt[1] if rt else None,
+                "id": r["id"], "nm": r.get("nm"), "enm": self.en_name(r).split(",")[0] or None,
+                "img": img(r.get("img")), "rt": r.get("rt"), "status": r.get("status"),
+                "unreleased": self.unreleased(mid), "ver": r.get("ver"), "cat": r.get("cat"),
+                "dir": r.get("dir"), "star": r.get("star"), "dur": r.get("dur"), "src": r.get("src"),
+                "dra": r.get("dra"), "pubDesc": r.get("pubDesc"), "video": r.get("video"),
+                "rank": r.get("rank", 999),
+                "wish": {"maoyan": wm, "tpp": wt if tp else None},
+                "delta": {"maoyan": (wm - y[0]) if y else None,
+                          "tpp": (wt - y[1]) if (y and tp and y[1]) else None},
+                "douban": ({"sc": db.get("sc", 0), "count": db.get("count", 0), "reason": db.get("reason", ""),
+                            "url": db.get("url") or f"https://m.douban.com/movie/subject/{db['id']}/"}
+                           if db.get("id") else None),
+                "imdb": ({"sc": ir[0] if ir else None, "votes": ir[1] if ir else None,
                           "url": f"https://m.imdb.com/title/{imdb_id}/"} if imdb_id else None),
-                "delta": {"maoyan": (my.get("wish", 0) - y[0]) if y else None,
-                          "tpp": (tp.get("wish", 0) - y[1]) if (y and tp and y[1]) else None},
-                "cinemas": {cid: {"dates": v["dates"], "count": v["count"], "first": v["first"]}
-                            for cid, v in here.items()},
+                "tomato": ({"critics": rt.get("critics"), "audience": rt.get("audience"), "count": rt.get("criticsCount"),
+                        "url": rt.get("url") or f"https://www.rottentomatoes.com/{rt['id']}"}
+                       if rt.get("id") else None),
+                "links": {"maoyan": f"https://m.maoyan.com/movie/{r['id']}", "tpp": tp.get("url")},
+                "opened": opened,
                 "watch": self.watched(mid, r.get("nm")),
             })
         movies.sort(key=lambda m: (m["status"] != "now", m["rank"] if m["status"] == "now" else 0,
-                                   m.get("rt") or "9999", -(m["maoyan"]["wish"] or 0)))
-        # 历史只留 30 天
+                                   m.get("rt") or "9999", -(m["wish"]["maoyan"] or 0)))
         for d in sorted(hist)[:-30]:
             hist.pop(d, None)
+        live = {str(m["id"]) for m in movies}
         history = {}
         for d in sorted(hist):
             for mid, v in hist[d].items():
-                history.setdefault(mid, []).append([d, v[0], v[1]])
-        live = {str(m["id"]) for m in movies}
-        history = {k: v for k, v in history.items() if k in live and len(v) > 1}
+                if mid in live:
+                    history.setdefault(mid, []).append([d, v[0], v[1]])
+        history = {k: v for k, v in history.items() if len(v) > 1}
 
         cinemas = []
-        schedule = {}
         for c in self.cfg["cinemas"]:
-            cid = str(c["id"])
-            cs = st["cinemas"].get(cid, {})
+            cs = st["cinemas_ok"].get(str(c["id"]), {})
             cinemas.append({"id": c["id"], "short": c["short"], "name": cs.get("name") or c["name"],
-                            "addr": cs.get("addr"), "lat": cs.get("lat"), "lng": cs.get("lng"),
-                            "at": cs.get("at")})
-            schedule[cid] = {mid: v["days"] for mid, v in (cs.get("movies") or {}).items() if v.get("days")}
+                            "addr": cs.get("addr"), "at": cs.get("at")})
 
         st["events"] = (self.events + st["events"])[:150]
         save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"],
                                         "cinemas": cinemas, "movies": movies})
-        save_json(OUT / "schedule.json", {"updated": NOW_S, "cinemas": schedule})
         save_json(OUT / "history.json", history)
         save_json(OUT / "events.json", st["events"][:100])
         save_json(OUT / "status.json", {"updated": NOW_S, "sources": self.status}, pretty=True)
+        (OUT / "schedule.json").unlink(missing_ok=True)
         save_json(STATE_FILE, st)
 
     # ------------------------------------------------------------ 推送
@@ -473,40 +588,33 @@ class Radar:
             level = "timeSensitive" if "开票" in title else None
             link = url
             if url and len(bodies) == 1 and mids[title][0]:
-                link = f"{url}#m={mids[title][0]}"
+                link = f"{url}#m{mids[title][0]}"
             notify.push(title, body, link, level)
 
     # ------------------------------------------------------------ main
     def run(self):
         first = not self.state["bootstrapped"]
-        steps = [("lists", self.update_lists), ("cinemas", self.update_cinemas), ("details", self.update_details),
-                 ("tpp", self.update_tpp), ("imdb", self.update_imdb)]
-        for name, fn in steps:
-            if name not in ("cinemas", "details") and not self.due(name):
+        steps = [("lists", self.update_lists, True), ("details", self.update_details, False),
+                 ("cinemas", self.update_cinemas, False), ("tpp", self.update_tpp, True),
+                 ("imdb", self.update_imdb, True), ("wikidata", self.update_wikidata, False),
+                 ("douban", self.update_douban, False), ("rt", self.update_rt, False)]
+        for name, fn, gated in steps:
+            if gated and not self.due(name):
                 continue
             try:
                 fn()
             except Exception as e:  # noqa: BLE001
                 traceback.print_exc()
-                self.mark(name if name != "lists" else "maoyan", False, f"程序出错：{e.__class__.__name__}")
+                self.mark({"lists": "maoyan"}.get(name, name), False, f"程序出错：{e.__class__.__name__}")
         self.check_scores()
-        if first:
-            ok = [k for k, v in self.status.items() if v.get("ok")]
-            if any(k.startswith("cinema:") for k in ok):
-                self.state["bootstrapped"] = True
-                n = sum(len(c.get("movies", {})) for c in self.state["cinemas"].values())
-                self.events = [{"at": NOW_S, "type": "system", "title": "✅ 电影雷达已启动",
-                                "body": f"正在盯 {len(self.cfg['cinemas'])} 家影院（{n} 部在排片），之后有新开票会第一时间提醒你"}]
+        if first and any(k.startswith("cinema:") and v.get("ok") for k, v in self.status.items()):
+            self.state["bootstrapped"] = True
+            n = sum(len(o) for o in self.state["opened"].values())
+            self.events = [{"at": NOW_S, "type": "system", "title": "✅ 电影雷达已启动",
+                            "body": f"正在盯 {len(self.cfg['cinemas'])} 家影院（未上映已开票 {n} 部），"
+                                    f"之后有新片开票会第一时间提醒你"}]
         self.write_outputs()
         self.send()
-
-
-def md(d):
-    try:
-        x = datetime.fromisoformat(d)
-        return f"{x.month}月{x.day}日"
-    except (TypeError, ValueError):
-        return d or ""
 
 
 def main():

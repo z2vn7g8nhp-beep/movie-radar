@@ -78,7 +78,7 @@ img{display:block}
 .tabs{position:fixed;left:14px;right:14px;bottom:calc(10px + var(--sb));z-index:6;display:flex;padding:5px;border-radius:26px;
   background:rgba(255,255,255,.78);-webkit-backdrop-filter:saturate(1.8) blur(24px);backdrop-filter:saturate(1.8) blur(24px);
   box-shadow:0 10px 30px rgba(24,26,48,.12),inset 0 0 0 .5px rgba(24,26,48,.06)}
-.tabs button{flex:1;height:48px;border-radius:21px;font-size:11px;font-weight:500;color:var(--faint);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+.tabs button{flex:1;height:48px;border-radius:21px;font-size:10.5px;font-weight:500;color:var(--faint);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
 .tabs svg{width:22px;height:22px}
 .tabs button[aria-selected=true]{color:var(--coral);background:var(--coral-bg)}
 .tabs .n{position:absolute;top:5px;left:calc(50% + 7px);min-width:15px;height:15px;border-radius:8px;background:var(--coral);color:#fff;font-size:10px;line-height:15px;text-align:center;padding:0 4px;font-weight:600}
@@ -299,6 +299,127 @@ img{display:block}
 .toast span{flex:1}
 .toast button{font-weight:600;color:#ffb199;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ================= 票夹 ================= */
+.cta{display:flex;gap:8px;justify-content:center;padding:16px var(--pad) 0}
+.rec-btn{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border-radius:20px;background:var(--ink);color:#fff;font-size:14px;font-weight:500;box-shadow:0 6px 16px rgba(24,26,48,.18)}
+.rec-btn svg{width:16px;height:16px}
+.seen{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;height:44px;padding:0 16px;border-radius:14px;background:var(--card);font-size:12px;color:var(--dim);box-shadow:0 1px 3px rgba(24,26,48,.06);line-height:1.3}
+.seen span{font-size:14px;font-weight:500;color:var(--ink)}
+.rec-again{height:44px;padding:0 16px;border-radius:14px;background:var(--soft);font-size:13px;color:var(--ink-2)}
+
+/* 票根 */
+.stubs{display:grid;gap:14px;padding:0 16px}
+.stubs > *{min-width:0}
+.stub-wrap{min-width:0;filter:drop-shadow(0 1px 1px rgba(24,26,48,.05)) drop-shadow(0 8px 16px rgba(24,26,48,.09));cursor:pointer}
+.stub{--tint:#fff1ea;--acc:#d9481c;position:relative;display:flex;height:152px;border-radius:14px;text-align:left;width:100%;
+  background:linear-gradient(105deg,var(--tint) 0%,#fff 82%);
+  -webkit-mask:radial-gradient(circle 7px at calc(100% - 74px) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at calc(100% - 74px) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;
+          mask:radial-gradient(circle 7px at calc(100% - 74px) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at calc(100% - 74px) 100%,#0000 97%,#000) bottom/100% 51% no-repeat}
+.stub-main{flex:1;min-width:0;display:flex;gap:12px;padding:13px;position:relative;overflow:hidden;border-radius:14px 0 0 14px}
+.stub-p{width:84px;height:126px;border-radius:7px;object-fit:cover;flex:none;background:var(--soft);box-shadow:0 4px 12px rgba(24,26,48,.18)}
+.stub-info{min-width:0;flex:1;display:flex;flex-direction:column}
+.stub-t{font-family:var(--serif);font-weight:600;font-size:18px;line-height:1.25;letter-spacing:.02em;padding-right:40px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.stub-en{font-family:var(--latin);font-style:italic;font-size:11px;color:var(--dim);margin-top:2px;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stub-d{margin-top:auto;display:flex;gap:6px;align-items:baseline}
+.stub-d b{font-family:var(--num);font-weight:200;font-size:22px;letter-spacing:.01em;line-height:1.1}
+.stub-d span{font-size:11px;color:var(--dim)}
+.stub-c{font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.stub-n{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.stub-tail{width:74px;flex:none;border-left:1.5px dashed rgba(24,26,48,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 6px;background:rgba(255,255,255,.6);border-radius:0 14px 14px 0}
+.stub-tail small{font-size:9px;color:var(--faint);letter-spacing:.1em}
+.stub-tail b{font-family:var(--num);font-weight:200;font-size:28px;line-height:1;color:var(--acc);margin-top:1px}
+.stub-r{font-size:9px;color:var(--gold);letter-spacing:1px;margin-top:6px;white-space:nowrap}
+.stub-r.no{color:var(--faint);letter-spacing:0}
+.bars{display:flex;height:20px;margin-top:9px}
+.bars i{display:block;height:100%;background:var(--ink);opacity:.72}
+.stamp{position:absolute;right:8px;top:8px;width:50px;height:50px;border-radius:50%;border:2px solid rgba(229,72,77,.75);color:rgba(229,72,77,.82);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-14deg);font-size:11px;font-weight:700;letter-spacing:2px;
+  box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.5),inset 0 0 0 3.5px rgba(229,72,77,.45);mix-blend-mode:multiply;pointer-events:none}
+.stamp small{font-size:8px;letter-spacing:0;font-weight:500;margin-top:0}
+.stamp{font-size:10px}
+.stamping .stamp{animation:stamp .55s cubic-bezier(.3,1.5,.5,1) .45s both}
+.stub-wrap.stamping{animation:slidein .5s cubic-bezier(.22,1,.36,1) both}
+@keyframes stamp{0%{transform:rotate(-14deg) scale(2.4);opacity:0}100%{transform:rotate(-14deg) scale(1);opacity:1}}
+@keyframes slidein{0%{transform:translateY(24px) scale(.96);opacity:0}100%{transform:none;opacity:1}}
+
+/* 票夹页 */
+.wstats{display:grid;grid-template-columns:repeat(3,1fr);margin:4px 16px 0;background:var(--card);border-radius:20px;padding:16px 4px;box-shadow:0 1px 2px rgba(24,26,48,.04)}
+.wstats div{text-align:center}
+.wstats div+div{border-left:.5px solid var(--hair)}
+.wstats b{display:block;font-family:var(--num);font-weight:200;font-size:34px;line-height:1}
+.wstats span{font-size:11px;color:var(--faint)}
+.sec-more{margin-left:auto;font-size:13px;color:var(--coral-ink)}
+.badges{gap:8px;padding-bottom:6px}
+.badge{flex:none;width:76px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.medal{--h:20;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:26px;
+  background:radial-gradient(circle at 32% 26%,hsl(var(--h) 95% 95%),hsl(var(--h) 85% 80%) 70%,hsl(var(--h) 70% 70%));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.75),0 4px 12px hsla(var(--h),70%,50%,.25)}
+.badge:not(.ok) .medal{filter:grayscale(1);opacity:.38;box-shadow:inset 0 0 0 2px rgba(255,255,255,.75)}
+.bn{font-size:11px;font-weight:500;margin-top:6px;line-height:1.3}
+.bp{font-size:10px;color:var(--faint)}
+.badge:not(.ok) .bn{color:var(--dim)}
+.wallet-empty{margin:18px 16px 0;padding:28px 22px;border-radius:20px;background:var(--card);text-align:center;color:var(--dim);font-size:13px;line-height:1.7;box-shadow:0 1px 2px rgba(24,26,48,.04)}
+.wallet-empty .ghost-stub{margin:0 auto 16px;width:210px;height:84px;border-radius:10px;border:1.5px dashed var(--hair);position:relative;display:grid;place-items:center;color:var(--faint);font-size:12px}
+.hint{color:var(--faint);font-size:12px;text-align:center;margin:18px 30px 0}
+
+/* 记录观影：底部弹出 */
+.rec{position:fixed;inset:0;z-index:30;visibility:hidden}
+.rec.on{visibility:visible}
+.rec-back{position:absolute;inset:0;background:rgba(24,26,48,.28);opacity:0;transition:opacity .3s}
+.rec.on .rec-back{opacity:1}
+.rec-panel{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:24px 24px 0 0;padding:10px 18px calc(18px + var(--sb));
+  transform:translateY(100%);transition:transform .42s cubic-bezier(.22,1,.36,1);max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(24,26,48,.15)}
+.rec.on .rec-panel{transform:none}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 12px}
+.rec h3{margin:0;font-size:20px;font-weight:600}
+.rec .rec-mv{margin:2px 0 14px;color:var(--dim);font-size:13px}
+.f{display:block;background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:8px}
+.f > span{display:block;font-size:11px;color:var(--faint);margin-bottom:4px}
+.f input{width:100%;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);padding:2px 0;outline:none;-webkit-appearance:none;appearance:none;min-height:26px}
+.f input::placeholder{color:var(--faint)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{height:32px;padding:0 13px;border-radius:16px;background:var(--soft);font-size:13px;color:var(--ink-2)}
+.chip[aria-pressed=true]{background:var(--coral-bg);color:var(--coral-ink);box-shadow:inset 0 0 0 1px var(--coral-line);font-weight:500}
+.chips + input{margin-top:8px;border-top:.5px solid var(--hair)!important;padding-top:8px!important}
+.rstars{display:flex;gap:6px}
+.rstars button{font-size:28px;line-height:1;color:var(--soft);transition:transform .15s,color .15s;-webkit-text-stroke:0}
+.rstars button.on{color:var(--gold)}
+.rstars button:active{transform:scale(1.25)}
+.rstars .lab{align-self:center;font-size:12px;color:var(--faint);margin-left:6px}
+.btn.wide{width:100%;margin-top:8px;height:48px;border-radius:14px;font-size:16px}
+
+/* 票根展示 / 庆祝 */
+.reveal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;visibility:hidden}
+.reveal.on{visibility:visible}
+.rv-back{position:absolute;inset:0;background:rgba(246,246,249,.72);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);opacity:0;transition:opacity .3s}
+.reveal.on .rv-back{opacity:1}
+.rv-in{position:relative;width:100%;max-width:440px;padding:0 16px;max-height:100vh;overflow-y:auto;padding-top:calc(var(--st) + 20px);padding-bottom:calc(var(--sb) + 20px)}
+.rv-h{text-align:center;margin-bottom:16px}
+.rv-h b{display:block;font-size:20px;font-weight:600}
+.rv-h span{font-size:13px;color:var(--dim)}
+.rv-badges{margin-top:20px;display:grid;gap:8px}
+.rv-badge{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow);animation:pop .5s cubic-bezier(.3,1.5,.5,1) both}
+.rv-badge .medal{width:44px;height:44px;font-size:21px;flex:none}
+.rv-badge b{display:block;font-size:14px;font-weight:600}
+.rv-badge span{font-size:12px;color:var(--dim)}
+.rv-badge em{font-style:normal;font-size:10px;color:var(--coral-ink);background:var(--coral-bg);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+.rv-actions{display:flex;gap:8px;margin-top:20px}
+.rv-actions .btn{flex:1;height:46px}
+.rv-del{display:block;margin:14px auto 0;font-size:13px;color:var(--warn)}
+.rv-img{width:100%;border-radius:12px;box-shadow:var(--shadow)}
+.burst{position:absolute;left:50%;top:38%;pointer-events:none}
+.burst i{position:absolute;width:7px;height:7px;border-radius:2px;opacity:0;animation:fly 1s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes fly{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+
+/* 全部成就 */
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px;margin:18px 16px 0}
+.bgrid .badge{width:auto}
+.bgrid .bd{font-size:10px;color:var(--faint);line-height:1.35;margin-top:2px;padding:0 4px}
+.pbar{width:48px;height:3px;border-radius:2px;background:var(--soft);margin-top:4px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--coral);border-radius:2px}
+
 </style>
 </head>
 <body>
@@ -317,11 +438,14 @@ img{display:block}
   <button role="tab" data-tab="coming" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></svg>待映</button>
   <button role="tab" data-tab="opened" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8.5a2 2 0 0 0 0 4v0a2 2 0 0 0 0 4V19h18v-2.5a2 2 0 0 1 0-4 2 2 0 0 1 0-4V6H3z" transform="translate(0 -.5)"/><path d="M15 7v11" stroke-dasharray="1.5 2.5"/></svg>已开票</button>
   <button role="tab" data-tab="now" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>热映</button>
+  <button role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="2.5"/><path d="M6 8V6.5A1.5 1.5 0 0 1 7.5 5h9A1.5 1.5 0 0 1 18 6.5V8"/><path d="M8 5V3.8M16 5V3.8"/><path d="M3.5 13h17" stroke-dasharray="1.5 2.5"/></svg>票夹</button>
   <button role="tab" data-tab="feed" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 10a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 15 6 10"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>动态<span class="n" id="feedBadge" hidden></span></button>
 </nav>
 
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="电影详情"></section>
 <section class="sheet set" id="settings" role="dialog" aria-modal="true" aria-label="推送设置"></section>
+<div class="rec" id="rec"></div>
+<div class="reveal" id="reveal" role="dialog" aria-modal="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"><span></span><button hidden></button></div>
 
 <script>
@@ -393,7 +517,7 @@ function apply(d){
   const b = $("#feedBadge"); b.hidden = !unread; b.textContent = unread > 9 ? "9+" : unread;
   render();
   const m = location.hash.match(/^#m(\d+)/); if (m) openMovie(m[1], false);
-  if (gh.token() && !S.watch) syncStars();
+  if (gh.token() && !S.watch) { syncStars(); syncDiary(); }
 }
 
 /* ---------- 组件 ---------- */
@@ -439,7 +563,7 @@ function heroBlock(m){
 }
 
 /* ---------- 页面 ---------- */
-const TITLES = {coming: "即将上映", opened: "已开票", now: "正在热映", feed: "动态"};
+const TITLES = {coming: "即将上映", opened: "已开票", now: "正在热映", wallet: "票夹", feed: "动态"};
 function comingView(){
   const all = S.data.movies.filter(m => m.unreleased);
   if (S.q) { const hits = all.filter(match).sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)));
@@ -526,9 +650,11 @@ function searchView(){
 }
 function render(){
   if (!S.data) return;
-  $("#title").textContent = S.q ? "搜索" : TITLES[S.tab];
+  $("#title").textContent = S.q && !["feed", "wallet"].includes(S.tab) ? "搜索" : TITLES[S.tab];
   $("#sub").textContent = `${S.data.city || ""}  ${ago(S.data.updated)}更新`;
-  $("#main").innerHTML = (S.q && S.tab !== "feed" ? searchView() : ({coming: comingView, now: nowView, opened: openedView, feed: feedView})[S.tab]()) + foot();
+  const searching = S.q && !["feed", "wallet"].includes(S.tab);
+  $("#searchBtn").style.visibility = ["feed", "wallet"].includes(S.tab) ? "hidden" : "";
+  $("#main").innerHTML = (searching ? searchView() : ({coming: comingView, now: nowView, opened: openedView, wallet: walletView, feed: feedView})[S.tab]()) + (S.tab === "wallet" ? "" : foot());
   const more = $("#more"); if (more) more.onclick = () => { S.limit += 60; render(); };
   const hs = $("#heroes"), dots = $("#dots");
   if (hs && dots) hs.addEventListener("scroll", () => {
@@ -560,6 +686,7 @@ function openMovie(id, push = true){
     <div class="dmeta">${m.unreleased && n != null && n >= 0 ? `<span class="cd">${esc(when)}</span>` : esc(when)}${meta2 ? `<br>${esc(meta2)}` : ""}</div>
     ${m.unreleased ? `<div class="dtks">${S.data.cinemas.map(c => { const o = (m.opened || {})[String(c.id)];
         return o ? `<span class="tk big">${esc(c.short)} 首场 <b>${md(o.first)}</b></span>` : `<span class="tk big ghost">${esc(c.short)} 未开票</span>`; }).join("")}</div>` : ""}
+    ${watchCTA(m)}
     <div class="scores3">
       ${cell("db", IC.db.replace('viewBox="0 0 16 16"', 'viewBox="0 0 16 16" width="16"') + `<span style="margin-left:5px;font-size:11px;color:var(--dim)">豆瓣</span>`, val("db", m), d ? (d.sc > 0 ? `${wan(d.count)} 人评` : (d.reason || "还没开分")) : "未找到", d && d.url)}
       ${cell("im", IC.im, val("im", m), i ? (i.votes ? `${wan(i.votes)} 人评` : "还没开分") : "未找到", i && i.url)}
@@ -728,7 +855,7 @@ function renderSettings(){
       if (!r.ok) throw new Error(r.status === 404 ? "找不到仓库：确认密钥里选了这个仓库" : `连接失败（HTTP ${r.status}）`);
       const info = await r.json();
       if (info.permissions && info.permissions.push === false) throw new Error("密钥没有写入权限：Contents 需要选 Read and write");
-      await syncStars(); renderSettings(); toast("已连接 GitHub");
+      await syncStars(); syncDiary(); renderSettings(); toast("已连接 GitHub");
     } catch (e) { setPref("ghToken", ""); save.disabled = false; save.textContent = "连接"; err.hidden = false; err.textContent = e.message; }
   };
   const out = $("#logout"); if (out) out.onclick = () => { setPref("ghToken", ""); S.watch = null; renderSettings(); render(); };
@@ -747,6 +874,343 @@ function closeSettings(){ $("#settings").classList.remove("on"); document.body.s
 $("#openSettings").onclick = openSettings;
 
 
+
+/* ================= 票夹：看过的电影、票根、成就 ================= */
+S.diary = getPref("diary", []);
+IC.check = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+
+/* ---- 存储：本机 + 仓库里的 diary.json ---- */
+async function readDiary(){
+  const r = await gh.call("GET", `/contents/diary.json?t=${Date.now()}`);
+  if (r.status === 404) return {data: {entries: []}, sha: null};
+  if (!r.ok) throw new Error(`读取票夹失败（HTTP ${r.status}）`);
+  const j = await r.json(); let data; try { data = JSON.parse(b64d(j.content)); } catch { data = {}; }
+  data.entries = Array.isArray(data.entries) ? data.entries : [];
+  return {data, sha: j.sha};
+}
+async function writeDiary(mutate, message){
+  for (let i = 0; i < 3; i++) {
+    const {data, sha} = await readDiary();
+    mutate(data.entries);
+    const r = await gh.call("PUT", "/contents/diary.json", {message, sha: sha || undefined,
+      content: b64e(JSON.stringify(data, null, 1) + "\n")});
+    if (r.ok) return data.entries;
+    if (r.status !== 409 && r.status !== 422) throw new Error(`HTTP ${r.status}`);
+  }
+  throw new Error("保存冲突");
+}
+const saveLocalDiary = () => setPref("diary", S.diary);
+const clean = e => { const c = {...e}; delete c.pending; return c; };
+async function syncDiary(){
+  if (!gh.token()) return;
+  try {
+    const {data} = await readDiary();
+    const have = new Set(data.entries.map(e => e.id));
+    const pending = S.diary.filter(e => e.pending && !have.has(e.id));
+    S.diary = pending.length
+      ? await writeDiary(l => pending.forEach(e => { if (!l.some(x => x.id === e.id)) l.push(clean(e)); }), `收藏 ${pending.length} 张票根`)
+      : data.entries;
+    saveLocalDiary();
+    if (S.tab === "wallet") render();
+  } catch (e) { console.warn("票夹同步失败", e); }
+}
+async function commitDiary(localMut, remoteMut, message){
+  localMut(S.diary); saveLocalDiary();
+  if (!gh.token()) return true;
+  try { S.diary = await writeDiary(remoteMut, message); saveLocalDiary(); return true; }
+  catch (e) { toast("已存在这台手机上，同步到 GitHub 失败，稍后会自动重试"); return false; }
+}
+
+/* ---- 统计与成就 ---- */
+function sortedDiary(){ return [...S.diary].sort((a,b) => (a.date + a.at).localeCompare(b.date + b.at)); }
+function serialOf(id){ return sortedDiary().findIndex(e => e.id === id) + 1; }
+function diaryStats(list = S.diary){
+  const year = String(todayYmd()[0]), mine = new Set((S.data ? S.data.cinemas : []).map(c => c.short));
+  const cnt = {}, inc = (k, v) => { cnt[k] = cnt[k] || {}; cnt[k][v] = (cnt[k][v] || 0) + 1; };
+  const genres = new Set(), regions = new Set(), visited = new Set();
+  const s = {n: list.length, thisYear: 0, premiere: 0, early: 0, starred: 0, high: 0, gem: 0, five: 0, one: 0};
+  for (const e of list) {
+    inc("movie", e.mid); inc("day", e.date); inc("month", e.date.slice(0, 7)); if (e.cinema) inc("cinema", e.cinema);
+    if (mine.has(e.cinema)) visited.add(e.cinema);
+    (e.cat || "").split(/[,，/、\s]+/).filter(Boolean).forEach(g => genres.add(g));
+    (e.src || "").split(/[,，/、\s]+/).filter(Boolean).forEach(g => regions.add(g));
+    if (e.date.startsWith(year)) s.thisYear++;
+    if (e.rt && e.rt.length === 10) { if (e.date === e.rt) s.premiere++; else if (e.date < e.rt) s.early++; }
+    if (e.starred) s.starred++; if (e.db >= 8.5) s.high++; if (e.wish && e.wish < 10000) s.gem++;
+    if (e.rating === 5) s.five++; if (e.rating === 1) s.one++;
+  }
+  const max = k => Math.max(0, ...Object.values(cnt[k] || {}));
+  return Object.assign(s, {cinemas: Object.keys(cnt.cinema || {}).length, repeat: max("movie"), perDay: max("day"),
+    perMonth: max("month"), perCinema: max("cinema"), mine: visited.size, mineTotal: mine.size || 2,
+    genres: genres.size, regions: regions.size});
+}
+const BADGES = [
+  {k: "first",   e: "🎟️", h: 14,  n: "第一张票根", d: "收藏第一张票根",          p: s => [s.n, 1]},
+  {k: "ten",     e: "🍿", h: 38,  n: "十部影迷",   d: "累计看过 10 部",          p: s => [s.n, 10]},
+  {k: "fifty",   e: "🎞️", h: 262, n: "资深影迷",   d: "累计看过 50 部",          p: s => [s.n, 50]},
+  {k: "hundred", e: "🏆", h: 45,  n: "百部之约",   d: "累计看过 100 部",         p: s => [s.n, 100]},
+  {k: "premiere",e: "🌅", h: 22,  n: "首映日",     d: "在上映当天去看",          p: s => [s.premiere, 1]},
+  {k: "early",   e: "⚡", h: 50,  n: "抢先一步",   d: "正式上映前就看到了",      p: s => [s.early, 1]},
+  {k: "wish",    e: "⭐", h: 44,  n: "心愿达成",   d: "看了一部星标过的电影",    p: s => [s.starred, 1]},
+  {k: "twice",   e: "🔁", h: 200, n: "二刷",       d: "同一部电影看两次",        p: s => [s.repeat, 2]},
+  {k: "double",  e: "🎬", h: 280, n: "连场",       d: "同一天看两部",            p: s => [s.perDay, 2]},
+  {k: "month",   e: "📅", h: 190, n: "月度影迷",   d: "一个月里看 4 部",         p: s => [s.perMonth, 4]},
+  {k: "both",    e: "🏙️", h: 220, n: "双城记",     d: "两家常去的影院都去过",    p: s => [s.mine, s.mineTotal]},
+  {k: "regular", e: "🪑", h: 30,  n: "老座位",     d: "在同一家影院看 10 部",    p: s => [s.perCinema, 10]},
+  {k: "genres",  e: "🎭", h: 320, n: "类型收集者", d: "看过 6 种类型",           p: s => [s.genres, 6]},
+  {k: "world",   e: "🌏", h: 170, n: "环球旅行",   d: "看过 4 个国家或地区的电影", p: s => [s.regions, 4]},
+  {k: "high",    e: "💎", h: 205, n: "高分猎手",   d: "看过 5 部豆瓣 8.5 以上",  p: s => [s.high, 5]},
+  {k: "gem",     e: "🔍", h: 140, n: "冷门宝藏",   d: "看过一部想看不到 1 万人的电影", p: s => [s.gem, 1]},
+  {k: "five",    e: "💯", h: 350, n: "满分时刻",   d: "第一次打出 5 星",         p: s => [s.five, 1]},
+  {k: "harsh",   e: "🍅", h: 8,   n: "毒舌",       d: "给一部电影打了 1 星",     p: s => [s.one, 1]},
+];
+const unlockedSet = s => new Set(BADGES.filter(b => { const [c, g] = b.p(s); return c >= g; }).map(b => b.k));
+const progress = (b, s) => { const [c, g] = b.p(s); return Math.min(1, c / g); };
+function badgeHTML(b, s, un, full){
+  const [c, g] = b.p(s), ok = un.has(b.k);
+  return `<button class="badge${ok ? " ok" : ""}" data-badge="${b.k}"><span class="medal" style="--h:${b.h}">${b.e}</span>
+    <span class="bn">${b.n}</span>${full ? `<span class="bd">${b.d}</span>` : ""}
+    ${ok ? `<span class="bp">已解锁</span>` : full ? `<span class="pbar"><i style="width:${progress(b, s) * 100}%"></i></span><span class="bp">${Math.min(c, g)}/${g}</span>` : `<span class="bp">${Math.min(c, g)}/${g}</span>`}</button>`;
+}
+
+/* ---- 票根 ---- */
+function barcode(id){
+  let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  let s = ""; for (let i = 0; i < 20; i++) { h = (h * 1103515245 + 12345) >>> 0; s += `<i style="width:${1 + (h >>> 16) % 3}px;margin-right:${1 + (h >>> 9) % 2}px"></i>`; }
+  return s;
+}
+function stubHTML(e, opt = {}){
+  const no = String(serialOf(e.id)).padStart(3, "0"), [y, mo, d] = e.date.split("-");
+  const r = e.rating || 0;
+  return `<div class="stub-wrap${opt.stamp ? " stamping" : ""}" ${opt.click ? `data-entry="${e.id}" role="button" tabindex="0"` : ""}><div class="stub" style="--tint:${e.tint || "#fff1ea"};--acc:${e.accent || "#d9481c"}">
+    <div class="stub-main">
+      <img class="stub-p" src="${esc(e.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
+      <div class="stub-info">
+        <div class="stub-t">${esc(e.nm)}</div>${e.enm ? `<div class="stub-en">${esc(e.enm)}</div>` : ""}
+        <div class="stub-d"><b>${y}.${mo}.${d}</b><span>${wk(e.date)}</span></div>
+        <div class="stub-c">${esc([e.cinema, e.seat].filter(Boolean).join("  ") || "　")}</div>
+        ${e.note ? `<div class="stub-n">“${esc(e.note)}”</div>` : ""}
+      </div>
+      <div class="stamp">已观影<small>${+mo}.${+d}</small></div>
+    </div>
+    <div class="stub-tail"><small>NO.</small><b>${no}</b>
+      <div class="stub-r${r ? "" : " no"}">${r ? "★".repeat(r) + "☆".repeat(5 - r) : "未评分"}</div>
+      <div class="bars">${barcode(e.id)}</div></div>
+  </div></div>`;
+}
+
+/* ---- 票夹页 ---- */
+function walletView(){
+  const s = diaryStats(), un = unlockedSet(s);
+  const ordered = [...BADGES].sort((a, b) => (un.has(b.k) - un.has(a.k)) || progress(b, s) - progress(a, s));
+  let h = `<div class="wstats"><div><b>${s.n}</b><span>部电影</span></div><div><b>${s.thisYear}</b><span>今年</span></div><div><b>${s.cinemas}</b><span>家影院</span></div></div>
+    <div class="sec"><h3>成就</h3><span class="note">${un.size} / ${BADGES.length}</span><button class="sec-more" id="allBadges">全部</button></div>
+    <div class="hscroll badges">${ordered.map(b => badgeHTML(b, s, un)).join("")}</div>`;
+  const list = sortedDiary().reverse();
+  if (!list.length) return h + `<div class="wallet-empty"><div class="ghost-stub">你的第一张票根</div>看完一部电影，在电影页点"看过了，收进票夹"，<br>票根就会收进这里。</div>`;
+  let cur = "";
+  for (const e of list) {
+    const k = e.date.slice(0, 7);
+    if (k !== cur) { if (cur) h += `</div>`; cur = k;
+      h += `<div class="sec"><h3>${+k.slice(0, 4) === todayYmd()[0] ? "" : k.slice(0, 4) + "年"}${+k.slice(5)}月</h3><span class="note">${list.filter(x => x.date.startsWith(k)).length} 部</span></div><div class="stubs">`; }
+    h += stubHTML(e, {click: true});
+  }
+  h += `</div>`;
+  if (!gh.token()) h += `<p class="hint">票根现在只存在这台手机上。在设置里连接 GitHub 后会自动备份，换手机也不会丢。</p>`;
+  return h;
+}
+
+/* ---- 记录观影 ---- */
+let REC = null;
+function openRecord(m){
+  const today = new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Shanghai"});
+  const opened = S.data.cinemas.filter(c => (m.opened || {})[String(c.id)]);
+  REC = {m, cinema: (opened[0] || S.data.cinemas[0] || {}).short || "", other: false, rating: 0};
+  const el = $("#rec");
+  el.innerHTML = `<div class="rec-back"></div><div class="rec-panel" role="dialog" aria-label="记下这次观影">
+    <div class="grab"></div><h3>记下这次观影</h3><p class="rec-mv">《${esc(m.nm)}》</p>
+    <label class="f"><span>哪天看的</span><input type="date" id="rDate" value="${today}" max="${today}"></label>
+    <div class="f"><span>在哪看的</span><div class="chips" id="rCine">
+      ${S.data.cinemas.map(c => `<button class="chip" data-c="${esc(c.short)}" aria-pressed="${c.short === REC.cinema}">${esc(c.short)}</button>`).join("")}
+      <button class="chip" data-c="" aria-pressed="false">其他影院</button></div>
+      <input id="rOther" placeholder="影院名称" hidden></div>
+    <label class="f"><span>影厅和座位</span><input id="rSeat" placeholder="比如 IMAX厅 7排12座（选填）"></label>
+    <div class="f"><span>你的评分</span><div class="rstars" id="rStars">${[1,2,3,4,5].map(i => `<button data-v="${i}" aria-label="${i} 星">★</button>`).join("")}<span class="lab" id="rLab">点星星打分</span></div></div>
+    <label class="f"><span>一句话</span><input id="rNote" maxlength="40" placeholder="写点什么（选填）"></label>
+    <button class="btn wide" id="rSave">收进票夹</button></div>`;
+  el.classList.add("on");
+  el.querySelector(".rec-back").onclick = closeRecord;
+  el.querySelectorAll("#rCine .chip").forEach(b => b.onclick = () => {
+    el.querySelectorAll("#rCine .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
+    REC.other = !b.dataset.c; REC.cinema = b.dataset.c; $("#rOther").hidden = !REC.other; if (REC.other) $("#rOther").focus();
+  });
+  const words = ["", "不推荐", "一般", "还行", "推荐", "力荐"];
+  el.querySelectorAll("#rStars button").forEach(b => b.onclick = () => {
+    const v = +b.dataset.v; REC.rating = REC.rating === v ? 0 : v;
+    el.querySelectorAll("#rStars button").forEach(x => x.classList.toggle("on", +x.dataset.v <= REC.rating));
+    $("#rLab").textContent = REC.rating ? words[REC.rating] : "点星星打分";
+  });
+  $("#rSave").onclick = saveRecord;
+}
+function closeRecord(){ $("#rec").classList.remove("on"); }
+
+function loadImg(src){ return new Promise((ok, no) => { const im = new Image(); im.crossOrigin = "anonymous"; im.referrerPolicy = "no-referrer"; im.onload = () => ok(im); im.onerror = no; im.src = src; }); }
+async function tintOf(src){
+  try {
+    const im = await loadImg(src), c = document.createElement("canvas"); c.width = 12; c.height = 18;
+    const x = c.getContext("2d"); x.drawImage(im, 0, 0, 12, 18);
+    const d = x.getImageData(0, 0, 12, 18).data; let r = 0, g = 0, b = 0, w = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const R = d[i], G = d[i+1], B = d[i+2], mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+      const sat = mx ? (mx - mn) / mx : 0, lum = (mx + mn) / 2, wt = sat * sat * (lum > 35 && lum < 230 ? 1 : .15) + .02;
+      r += R * wt; g += G * wt; b += B * wt; w += wt;
+    }
+    r /= w * 255; g /= w * 255; b /= w * 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
+    let h = 0, sat = dd ? dd / (1 - Math.abs(2 * l - 1)) : 0;
+    if (dd) h = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+    h = Math.round((h * 60 + 360) % 360);
+    const S1 = Math.round(Math.min(.75, Math.max(.32, sat)) * 100);
+    return {tint: `hsl(${h} ${S1}% 90%)`, accent: `hsl(${h} ${Math.min(80, S1 + 10)}% 38%)`};
+  } catch { return {tint: "#fff1ea", accent: "#d9481c"}; }
+}
+async function saveRecord(){
+  const m = REC.m, btn = $("#rSave");
+  const cinema = REC.other ? $("#rOther").value.trim() : REC.cinema;
+  const date = $("#rDate").value || new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Shanghai"});
+  btn.disabled = true; btn.textContent = "正在制作票根…";
+  const before = unlockedSet(diaryStats());
+  const look = await tintOf(m.img);
+  const e = {id: "w" + Date.now().toString(36), mid: m.id, nm: m.nm, enm: m.enm || "", img: m.img, rt: m.rt || "",
+    cat: m.cat || "", src: m.src || "", dir: m.dir || "", dur: m.dur || null, date, cinema, seat: $("#rSeat").value.trim(),
+    rating: REC.rating, note: $("#rNote").value.trim(), tint: look.tint, accent: look.accent,
+    db: m.douban && m.douban.sc || null, wish: m.wish ? m.wish.maoyan : null, starred: isFav(m), at: new Date().toISOString()};
+  await commitDiary(l => l.push({...e, pending: true}), l => { if (!l.some(x => x.id === e.id)) l.push(clean(e)); }, `收藏票根《${m.nm}》`);
+  closeRecord();
+  const after = unlockedSet(diaryStats());
+  showReveal(e, BADGES.filter(b => after.has(b.k) && !before.has(b.k)));
+  if ($("#sheet").classList.contains("on")) openMovie(m.id, false);
+  if (S.tab === "wallet") render();
+}
+
+/* ---- 票根展示 ---- */
+function burst(){
+  const cols = ["#ff6a3d", "#ffb020", "#1fa463", "#5b8def", "#e5484d", "#b26bff"];
+  return `<div class="burst">${Array.from({length: 26}, (_, i) => { const a = i / 26 * Math.PI * 2, d = 90 + Math.random() * 90;
+    return `<i style="background:${cols[i % cols.length]};--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 40}px;--r:${Math.random() * 540}deg;animation-delay:${.45 + Math.random() * .15}s"></i>`; }).join("")}</div>`;
+}
+function showReveal(e, fresh = null){
+  const isNew = fresh !== null, no = serialOf(e.id);
+  const el = $("#reveal");
+  el.innerHTML = `<div class="rv-back"></div><div class="rv-in">
+    <div class="rv-h"><b>${isNew ? "收进票夹啦" : esc(e.nm)}</b><span>${isNew ? `这是你的第 ${no} 张票根` : `第 ${no} 张票根`}</span></div>
+    ${stubHTML(e, {stamp: isNew})}${isNew && fresh.length ? burst() : ""}
+    ${isNew && fresh.length ? `<div class="rv-badges">${fresh.map((b, i) => `<div class="rv-badge" style="animation-delay:${.9 + i * .12}s"><span class="medal" style="--h:${b.h}">${b.e}</span><div><b>${b.n}<em>新成就</em></b><span>${b.d}</span></div></div>`).join("")}</div>` : ""}
+    <div class="rv-actions"><button class="btn ghost" id="rvSave">存为图片</button><button class="btn" id="rvOk">${isNew ? "好的" : "关闭"}</button></div>
+    ${isNew ? "" : `<button class="rv-del" id="rvDel">删除这张票根</button>`}
+  </div>`;
+  el.classList.add("on");
+  const close = () => el.classList.remove("on");
+  el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
+  $("#rvSave").onclick = () => saveStubImage(e);
+  const del = $("#rvDel");
+  if (del) del.onclick = async () => {
+    if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "再点一次确认删除"; return; }
+    await commitDiary(l => { const i = l.findIndex(x => x.id === e.id); if (i >= 0) l.splice(i, 1); },
+                      l => { const i = l.findIndex(x => x.id === e.id); if (i >= 0) l.splice(i, 1); }, `删除票根《${e.nm}》`);
+    close(); render(); toast("已删除这张票根");
+  };
+}
+function openBadges(){
+  const s = diaryStats(), un = unlockedSet(s);
+  const el = $("#reveal");
+  el.innerHTML = `<div class="rv-back"></div><div class="rv-in"><div class="rv-h"><b>成就</b><span>已解锁 ${un.size} / ${BADGES.length}</span></div>
+    <div class="bgrid">${BADGES.map(b => badgeHTML(b, s, un, true)).join("")}</div>
+    <div class="rv-actions"><button class="btn" id="rvOk">关闭</button></div></div>`;
+  el.classList.add("on");
+  const close = () => el.classList.remove("on");
+  el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
+}
+
+/* ---- 存为图片（canvas 重画一张高清票根） ---- */
+function rr(x, X, y, w, h, r){ x.beginPath(); x.moveTo(X + r, y); x.arcTo(X + w, y, X + w, y + h, r); x.arcTo(X + w, y + h, X, y + h, r); x.arcTo(X, y + h, X, y, r); x.arcTo(X, y, X + w, y, r); x.closePath(); }
+function fitText(x, t, maxW){ if (x.measureText(t).width <= maxW) return t; while (t.length && x.measureText(t + "…").width > maxW) t = t.slice(0, -1); return t + "…"; }
+async function stubCanvas(e){
+  const W = 1200, H = 520, T = 230, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"), SANS = '-apple-system,"PingFang SC","Helvetica Neue",sans-serif', SERIF = '"Songti SC","STSong","Noto Serif CJK SC",serif';
+  const legacy = c2 => (c2 || "").replace(/hsl\((\d+) (\d+)% (\d+)%\)/, "hsl($1, $2%, $3%)");
+  const g = x.createLinearGradient(0, 0, W, H * .4); g.addColorStop(0, legacy(e.tint) || "#fff1ea"); g.addColorStop(.82, "#ffffff");
+  rr(x, 0, 0, W, H, 44); x.fillStyle = g; x.fill();
+  x.fillStyle = "rgba(255,255,255,.6)"; x.fillRect(W - T, 0, T, H);
+  try { const im = await loadImg(big(e.img, 480)); x.save(); rr(x, 44, 44, 288, 432, 20); x.clip(); x.drawImage(im, 44, 44, 288, 432); x.restore(); } catch {}
+  const L = 372, maxW = W - T - L - 150;
+  x.fillStyle = "#1c1d24"; x.font = `600 58px ${SERIF}`; x.textBaseline = "alphabetic";
+  const words = [...e.nm]; let line = "", lines = [];
+  for (const ch of words) { if (x.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch; }
+  lines.push(line); lines = lines.slice(0, 2); if (lines.length === 2) lines[1] = fitText(x, lines[1], maxW);
+  lines.forEach((l, i) => x.fillText(l, L, 112 + i * 70));
+  let y = 112 + (lines.length - 1) * 70;
+  if (e.enm) { x.font = `italic 28px "New York",Georgia,serif`; x.fillStyle = "#7c7f8c"; x.fillText(fitText(x, e.enm, maxW), L, y + 46); }
+  const [Y, M, D] = e.date.split("-");
+  x.font = `200 76px ${SANS}`; x.fillStyle = "#1c1d24"; x.fillText(`${Y}.${M}.${D}`, L, 382);
+  const dw = x.measureText(`${Y}.${M}.${D}`).width; x.font = `400 28px ${SANS}`; x.fillStyle = "#7c7f8c"; x.fillText(wk(e.date), L + dw + 14, 380);
+  x.font = `400 28px ${SANS}`; x.fillStyle = "#4b4d58"; x.fillText(fitText(x, [e.cinema, e.seat].filter(Boolean).join("  "), maxW + 100), L, 426);
+  if (e.note) { x.fillStyle = "#7c7f8c"; x.fillText(fitText(x, `“${e.note}”`, maxW + 100), L, 466); }
+  // 印章
+  x.save(); x.translate(W - T - 92, 100); x.rotate(-14 * Math.PI / 180); x.globalAlpha = .82;
+  x.strokeStyle = "#e5484d"; x.lineWidth = 5; x.beginPath(); x.arc(0, 0, 64, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 2; x.beginPath(); x.arc(0, 0, 55, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = "#e5484d"; x.textAlign = "center"; x.font = `700 28px ${SANS}`; x.fillText("已观影", 0, 6); x.font = `500 20px ${SANS}`; x.fillText(`${+M}.${+D}`, 0, 34); x.restore();
+  // 撕票线
+  x.save(); x.setLineDash([12, 10]); x.strokeStyle = "rgba(24,26,48,.22)"; x.lineWidth = 3; x.beginPath(); x.moveTo(W - T, 34); x.lineTo(W - T, H - 34); x.stroke(); x.restore();
+  // 副券
+  const cx = W - T / 2; x.textAlign = "center";
+  x.font = `500 22px ${SANS}`; x.fillStyle = "#a9acb7"; x.fillText("NO.", cx, 168);
+  x.font = `200 92px ${SANS}`; x.fillStyle = legacy(e.accent) || "#d9481c"; x.fillText(String(serialOf(e.id)).padStart(3, "0"), cx, 258);
+  x.font = `400 26px ${SANS}`; x.fillStyle = e.rating ? "#ffb020" : "#a9acb7"; x.fillText(e.rating ? "★".repeat(e.rating) + "☆".repeat(5 - e.rating) : "未评分", cx, 312);
+  let h = 7; for (const ch of e.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  let bx = cx - 70; x.fillStyle = "rgba(28,29,36,.75)";
+  for (let i = 0; i < 20 && bx < cx + 70; i++) { h = (h * 1103515245 + 12345) >>> 0; const w = 2 + (h >>> 16) % 3 * 2; x.fillRect(bx, 350, w, 60); bx += w + 3 + (h >>> 9) % 2 * 2; }
+  x.font = `500 16px ${SANS}`; x.fillStyle = "#a9acb7"; x.fillText("电影雷达", cx, 446);
+  // 打孔
+  x.globalCompositeOperation = "destination-out";
+  [[W - T, 0], [W - T, H]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 20, 0, Math.PI * 2); x.fill(); });
+  return c;
+}
+async function saveStubImage(e){
+  const btn = $("#rvSave"); if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+  try {
+    const c = await stubCanvas(e);
+    const blob = await new Promise(ok => c.toBlob(ok, "image/png"));
+    const file = new File([blob], `票根-${e.nm}.png`, {type: "image/png"});
+    if (navigator.canShare && navigator.canShare({files: [file]})) {
+      try { await navigator.share({files: [file]}); } catch (err) { if (err.name !== "AbortError") throw err; }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const box = $("#reveal .rv-in");
+      box.innerHTML = `<div class="rv-h"><b>长按图片保存</b><span>保存到相册，或者分享给朋友</span></div><img class="rv-img" src="${url}" alt="票根图片">
+        <div class="rv-actions"><button class="btn" id="rvOk2">完成</button></div>`;
+      $("#rvOk2").onclick = () => $("#reveal").classList.remove("on");
+    }
+  } catch (err) { toast("生成图片失败：" + err.message); }
+  if (btn) { btn.disabled = false; btn.textContent = "存为图片"; }
+}
+
+/* ---- 详情页里的入口 ---- */
+function watchCTA(m){
+  const mine = S.diary.filter(e => String(e.mid) === String(m.id)).sort((a, b) => b.date.localeCompare(a.date));
+  if (!mine.length) return `<div class="cta"><button class="rec-btn" data-rec="${m.id}">${IC.check}看过了，收进票夹</button></div>`;
+  return `<div class="cta"><button class="seen" data-entry="${mine[0].id}"><span>看过${mine.length > 1 ? ` ${mine.length} 次` : ""}</span>${mdc(mine[0].date)}，查看票根</button>
+    <button class="rec-again" data-rec="${m.id}">再记一次</button></div>`;
+}
+document.getElementById("sheet").addEventListener("click", ev => {
+  const r = ev.target.closest("[data-rec]"); if (r) { const m = S.data.movies.find(x => String(x.id) === r.dataset.rec); if (m) openRecord(m); return; }
+  const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); }
+});
+document.getElementById("main").addEventListener("click", ev => {
+  const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); return; }
+  if (ev.target.closest("[data-badge]") || ev.target.closest("#allBadges")) openBadges();
+});
 
 /* ---------- 交互 ---------- */
 $("#main").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) openMovie(b.dataset.id); });

@@ -39,6 +39,14 @@ GitHub → Settings → Developer settings → Fine-grained tokens → Generate 
 Repository access 只选这个仓库，Permissions 里 **Contents** 选 **Read and write**，生成后粘贴到网页设置里。
 密钥只存在你手机的浏览器里；星标存在仓库根目录的 `watch.json`，改动后 1～2 分钟生效。
 
+## 票夹：看过的电影和票根
+
+在电影页点"看过了，收进票夹"，记下哪天、在哪家影院、座位、评分和一句话，就会生成一张票根：
+底色取自海报，带编号、评分、条形码和"已观影"印章，可以存成图片分享。
+"票夹"页有观影统计和 18 个成就（首映日、二刷、连场、双城记、高分猎手……）。
+
+票夹存在仓库根目录的 `diary.json`（连接 GitHub 后自动同步；没连接时先存在手机上）。改动它不会触发抓取。
+
 ## 改设置：编辑 `config.json`
 
 在 GitHub 网页上点开 `config.json` → 右上角铅笔图标 → 改完点 Commit changes，会自动重新跑一次。
@@ -68,6 +76,7 @@ Repository access 只选这个仓库，Permissions 里 **Contents** 选 **Read a
 ```
 config.json                 你的设置
 watch.json                  星标列表和开票提醒模式（网页自动维护）
+diary.json                  看过的电影 / 票根（网页自动维护）
 scraper/run.py              每次运行的主流程（抓取、比对、推送、输出）
 scraper/sources.py          猫眼 / 淘票票 / IMDb 的接口
 scraper/notify.py           Bark 推送

@@ -11,8 +11,11 @@
   python scraper/run.py --test-push  只发一条测试推送
 """
 import argparse
+import base64
 import json
 import os
+import re
+import secrets
 import sys
 import traceback
 import requests
@@ -121,6 +124,58 @@ def load_watch():
             stars[str(x)] = ""
     mode = w.get("ticketing") if w.get("ticketing") in ("all", "starred") else "all"
     return stars, mode, ok
+
+
+def data_repo(method, path, body=None, raw=False):
+    """读写私有数据仓库里的文件；没配 DATA_REPO / DATA_TOKEN 时返回 None。"""
+    repo, token = os.environ.get("DATA_REPO", "").strip(), os.environ.get("DATA_TOKEN", "").strip()
+    if not (repo and token):
+        return None
+    return requests.request(method, f"https://api.github.com/repos/{repo}/contents/{path}", json=body, timeout=20,
+                            headers={"Authorization": f"Bearer {token}",
+                                     "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json"})
+
+
+def calendar_secret():
+    """日历订阅和主屏小组件用的私密链接。秘钥存在私有仓库的 calendar.json，第一次自动生成。
+    文件只放进网页（不进公开的 radar-data 分支），只有知道链接的人能打开。"""
+    try:
+        r = data_repo("GET", "calendar.json", raw=True)
+        if r is None:
+            return None
+        if r.status_code == 200:
+            s = (r.json() or {}).get("secret") or ""
+            return s if re.fullmatch(r"[A-Za-z0-9_-]{16,64}", s) else None
+        if r.status_code == 404:
+            s = secrets.token_hex(12)
+            body = json.dumps({"secret": s, "note": "电影雷达日历订阅和小组件的私密链接，删掉这个文件会换一个新链接"}, ensure_ascii=False)
+            w = data_repo("PUT", "calendar.json", {"message": "生成日历私密链接",
+                                                   "content": base64.b64encode(body.encode()).decode()})
+            if w is not None and w.status_code in (200, 201):
+                return s
+            print(f"[失败] 写入 calendar.json HTTP {w.status_code if w is not None else '-'}")
+            return None
+        print(f"[失败] 读取 calendar.json HTTP {r.status_code}")
+    except (requests.RequestException, ValueError) as e:
+        print(f"[失败] 读取 calendar.json：{e.__class__.__name__}")
+    return None
+
+
+def ics_text(s):
+    return str(s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def ics_fold(line):
+    """iCalendar 每行不超过 75 字节，超出的折行，续行以空格开头。"""
+    out, cur = [], b""
+    for ch in line:
+        b = ch.encode()
+        if len(cur) + len(b) > (75 if not out else 74):
+            out.append(cur.decode())
+            cur = b""
+        cur += b
+    out.append(cur.decode())
+    return "\r\n ".join(out)
 
 
 class Radar:
@@ -639,6 +694,63 @@ class Radar:
         save_json(OUT / "status.json", {"updated": NOW_S, "sources": self.status}, pretty=True)
         (OUT / "schedule.json").unlink(missing_ok=True)
         save_json(STATE_FILE, st)
+        try:
+            self.write_private(movies, cinemas)
+        except Exception as e:  # noqa: BLE001  日历出错不影响其他
+            traceback.print_exc()
+            print(f"[失败] 生成日历：{e.__class__.__name__}")
+
+    # ------------------------------------------------------------ 日历订阅 + 小组件数据（私密链接）
+    def write_private(self, movies, cinemas):
+        secret = calendar_secret()
+        if not secret:
+            return
+        cal = ROOT / "docs" / "cal"
+        cal.mkdir(parents=True, exist_ok=True)
+        url = site_url(self.cfg) or ""
+        if not self.watch_ok and url:
+            # 这轮没读到星标：把网上现有的文件原样留着，免得日历被清空
+            for ext in ("ics", "json"):
+                try:
+                    r = requests.get(f"{url}cal/{secret}.{ext}", timeout=20)
+                    if r.status_code == 200:
+                        (cal / f"{secret}.{ext}").write_bytes(r.content)
+                except requests.RequestException:
+                    pass
+            return
+        short = {str(c["id"]): c["short"] for c in cinemas}
+        starred = [m for m in movies if str(m["id"]) in self.stars or self.watched(str(m["id"]), m.get("nm"))]
+        stamp = NOW.astimezone(ZoneInfo("UTC")).strftime("%Y%m%dT%H%M%SZ")
+        lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//movie-radar//CN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+                 "X-WR-CALNAME:电影雷达 · 星标", "X-WR-TIMEZONE:Asia/Shanghai", "X-WR-CALDESC:星标电影的上映日和提前场",
+                 "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"]
+
+        def day(d, uid, summary, desc, link):
+            d0 = datetime.fromisoformat(d)
+            lines.extend(["BEGIN:VEVENT", f"UID:{uid}@movie-radar", f"DTSTAMP:{stamp}",
+                          f"DTSTART;VALUE=DATE:{d0:%Y%m%d}", f"DTEND;VALUE=DATE:{d0 + timedelta(days=1):%Y%m%d}",
+                          f"SUMMARY:{ics_text(summary)}", f"DESCRIPTION:{ics_text(desc)}", "TRANSP:TRANSPARENT"]
+                         + ([f"URL:{link}"] if link else [])
+                         + ["BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{ics_text('明天 ' + summary)}", "TRIGGER:-PT4H", "END:VALARM",
+                            "END:VEVENT"])
+        items = []
+        for m in starred:
+            mid, rt, op = str(m["id"]), m.get("rt") or "", m.get("opened") or {}
+            link = f"{url}#m{mid}" if url else m["links"]["maoyan"]
+            status = "；".join(f"{short.get(c, c)}首场 {md(o.get('first'))}" for c, o in op.items()) or "你的影院都还没开票"
+            if len(rt) == 10:
+                day(rt, f"rel-{mid}", f"《{m['nm']}》上映", f"{status}\n{link}", link)
+                for c, o in op.items():
+                    if o.get("first") and o["first"] < rt:
+                        day(o["first"], f"pre-{mid}-{c}", f"《{m['nm']}》{short.get(c, c)}提前场", f"正式上映 {md(rt)}\n{link}", link)
+            if m.get("unreleased"):
+                items.append({"id": m["id"], "nm": m["nm"], "img": m["img"], "rt": rt, "wish": m["wish"]["maoyan"],
+                              "opened": [{"c": short.get(c, c), "first": o.get("first")} for c, o in op.items()]})
+        lines.append("END:VCALENDAR")
+        (cal / f"{secret}.ics").write_text("\r\n".join(ics_fold(x) for x in lines) + "\r\n", "utf-8")
+        items.sort(key=lambda x: (x["rt"] if len(x["rt"]) == 10 else (x["rt"] or "9999") + "-99"))
+        save_json(cal / f"{secret}.json", {"updated": NOW_S, "site": url, "items": items})
+        print(f"  日历：星标 {len(starred)} 部，待映 {len(items)} 部")
 
     # ------------------------------------------------------------ 推送
     def send(self):

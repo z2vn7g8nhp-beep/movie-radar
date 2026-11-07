@@ -73,7 +73,6 @@ jobs:
         run: python scraper/run.py ${{ inputs.mode == 'force' && '--force' || '' }}
 
       - name: 保存数据（覆盖式，不让仓库越来越大）
-        id: save
         if: inputs.mode != 'test-push'
         run: |
           rm -rf /tmp/store && mkdir -p /tmp/store/state /tmp/store/data
@@ -87,7 +86,7 @@ jobs:
           git commit -q -m "数据 $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
           # GitHub 偶尔会临时拒绝推送（fatal error in commit_refs），隔一会儿重试，最多 5 次
           for i in 1 2 3 4 5; do
-            git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" radar-data && echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT" && exit 0
+            git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" radar-data && exit 0
             echo "第 $i 次保存失败，$((i * 8)) 秒后重试"; sleep $((i * 8))
           done
           exit 1
@@ -115,14 +114,10 @@ jobs:
         if: ${{ !cancelled() && inputs.mode != 'test-push' && steps.scrape.outcome == 'success' }}
         with:
           path: docs
-      # 主分支没新提交时，每次部署的版本号都一样，GitHub 会回"成功"却不换上新网页。
-      # 用这次数据提交的版本号部署，每轮都不一样
       - id: deploy
         if: ${{ !cancelled() && inputs.mode != 'test-push' && steps.scrape.outcome == 'success' }}
         continue-on-error: true
         uses: actions/deploy-pages@v4
-        env:
-          GITHUB_SHA: ${{ steps.save.outputs.sha || github.sha }}
       # GitHub 偶尔会临时找不到刚上传的网页包（No artifacts named "github-pages"），等一会儿再部署一次
       - name: 部署失败，20 秒后重试
         if: ${{ !cancelled() && steps.deploy.outcome == 'failure' }}
@@ -130,5 +125,3 @@ jobs:
       - id: deploy2
         if: ${{ !cancelled() && steps.deploy.outcome == 'failure' }}
         uses: actions/deploy-pages@v4
-        env:
-          GITHUB_SHA: ${{ steps.save.outputs.sha || github.sha }}

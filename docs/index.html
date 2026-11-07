@@ -839,13 +839,33 @@ async function load(){
   if (window.__RADAR__) { apply(window.__RADAR__); return; }
   const t = Date.now();
   const get = f => fetch(`data/${f}?t=${t}`, {cache:"no-store"}).then(r => r.ok ? r.json() : null).catch(() => null);
-  const [movies, hist, events, status] = await Promise.all(["movies.json","history.json","events.json","status.json"].map(get));
+  let [movies, hist, events, status] = await Promise.all(["movies.json","history.json","events.json","status.json"].map(get));
+  // 网页上的数据超过 20 分钟没变（GitHub 网页没换上新部署，或者手机连不上 github.io 只拿到了缓存），直接去数据分支取最新的
+  if (!status || t - new Date(status.updated) > 12e5) {
+    const fresh = await fromBranch(status);
+    if (fresh) ({movies, hist, events, status} = fresh);
+  }
   if (!movies) { $("#sub").textContent = "还没有数据"; $("#main").innerHTML =
     `<p class="empty">数据还没生成。到 GitHub 仓库的 Actions 里运行一次"更新电影数据"，几分钟后再刷新。</p>`; return; }
   apply({movies, hist, events, status});
 }
+/* 后台每轮都会把数据存到网站仓库的 radar-data 分支，通过 GitHub 接口读，不经过网页部署 */
+async function fromBranch(old){
+  const repo = gh.repo(); if (!repo) return null;
+  const get = async (f, tok = gh.token()) => {
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/data/${f}?ref=radar-data`, {cache: "no-store",
+      headers: {Accept: "application/vnd.github.raw+json", ...(tok ? {Authorization: `Bearer ${tok}`} : {})}}).catch(() => null);
+    if (r && r.ok) return r.json().catch(() => null);
+    return tok && r && (r.status === 401 || r.status === 403 || r.status === 404) ? get(f, "") : null;   // 密钥不管用就匿名再试
+  };
+  const st = await get("status.json");
+  if (!st || (old && new Date(st.updated) <= new Date(old.updated))) return null;
+  const [movies, hist, events] = await Promise.all(["movies.json", "history.json", "events.json"].map(f => get(f)));
+  return movies ? {movies, hist, events, status: st} : null;
+}
 function apply(d){
   S.data = d.movies; S.hist = d.hist || {}; S.events = d.events || []; S.status = (d.status && d.status.sources) || {};
+  S.statusAt = (d.status && d.status.updated) || d.movies.updated;
   updateBadge();
   render();
   // 只在第一次打开时按网址打开电影；回到前台重新加载数据时，不要把正在看的详情页跳回顶部
@@ -1008,10 +1028,16 @@ function feedView(){
 function foot(){
   const names = {maoyan:"猫眼", tpp:"淘票票", douban:"豆瓣", imdb:"IMDb", rt:"烂番茄", data:"星标数据"};
   S.data.cinemas.forEach(c => names["cinema:" + c.id] = c.short);
+  // 太久没更新也算异常，不能还亮绿灯：影院 1 小时、片单 2 小时、IMDb 8 小时
+  const lim = k => k === "imdb" ? 288e5 : k === "maoyan" || k === "tpp" ? 72e5 : 36e5;
   const ents = Object.entries(S.status).filter(([k]) => names[k]), bad = ents.filter(([, v]) => !v.ok);
-  const items = ents.map(([k, v]) => `<li><span class="dot${v.ok ? "" : " bad"}"></span>${names[k]}  ${v.ok ? ago(v.at) + "更新" : esc(v.msg)}</li>`).join("");
-  return `<div class="foot${bad.length || S.footOpen ? " open" : ""}"><button id="footBtn" class="${bad.length ? "bad" : ""}"><span class="dot${bad.length ? " bad" : ""}"></span>
-    ${bad.length ? `${bad.map(([k]) => names[k]).join("、")}暂时取不到数据` : `数据来源正常，${ago(S.data.updated)}更新`}<i>›</i></button><ul>${items}</ul></div>`;
+  const stale = !navigator.onLine || (S.statusAt && Date.now() - new Date(S.statusAt) > 18e5), warn = bad.length || stale;
+  const items = ents.map(([k, v]) => `<li><span class="dot${v.ok && !(Date.now() - new Date(v.at) > lim(k)) ? "" : " bad"}"></span>${names[k]}  ${v.ok ? ago(v.at) + "更新" : esc(v.msg)}</li>`).join("");
+  const head = bad.length ? `${bad.map(([k]) => names[k]).join("、")}暂时取不到数据`
+    : !navigator.onLine ? `没联网，显示的是 ${ago(S.statusAt)}的数据`
+    : stale ? `最后一次更新在 ${ago(S.statusAt)}，后台可能卡住了` : `数据来源正常，${ago(S.statusAt)}更新`;
+  return `<div class="foot${warn || S.footOpen ? " open" : ""}"><button id="footBtn" class="${warn ? "bad" : ""}"><span class="dot${warn ? " bad" : ""}"></span>
+    ${head}<i>›</i></button><ul>${items}</ul></div>`;
 }
 function searchView(){
   const hits = S.data.movies.filter(match).sort((a,b) => (b.unreleased - a.unreleased) || rtKey(a.rt).localeCompare(rtKey(b.rt)) || b.wish.maoyan - a.wish.maoyan);
@@ -2069,7 +2095,7 @@ document.addEventListener("keydown", e => { if (e.key !== "Escape") return;
   else if ($("#rec").classList.contains("on")) closeRecord();
   else if ($("#settings").classList.contains("on")) closeSettings(); else if ($("#sheet").classList.contains("on")) $("#close").click(); });
 addEventListener("scroll", () => $("#bar").classList.toggle("scrolled", scrollY > 4), {passive: true});
-document.addEventListener("visibilitychange", () => { if (!document.hidden && S.data && Date.now() - new Date(S.data.updated) > 6e5) load(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.data && Date.now() - new Date(S.statusAt || S.data.updated) > 3e5) load(); });
 
 S.tab = getPref("tab3", "coming");
 document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === S.tab));

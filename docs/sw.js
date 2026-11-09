@@ -2,7 +2,7 @@
    - 网页和数据：先联网取最新的；没网、或者 3 秒还连不上，就用上次的，从主屏打开不会白屏
    - 海报：取过一次就留着，最多 400 张
    - GitHub 接口、日历文件、跨域的 CORS 请求（票根存图用）都不经过缓存 */
-const SHELL = "radar-shell-v1", IMG = "radar-img-v1";
+const SHELL = "radar-shell-v2", IMG = "radar-img-v1";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(["./", "./manifest.json", "./icon-180.png", "./icon-192.png"])).catch(() => {}).then(() => self.skipWaiting()));

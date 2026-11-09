@@ -9,14 +9,17 @@
   python scraper/run.py --force      忽略间隔，全部重抓
   python scraper/run.py --dry-run    不发推送，只打印
   python scraper/run.py --test-push  只发一条测试推送
+  python scraper/run.py --no-sprint  星标电影快上映时也不多盯几分钟
 """
 import argparse
 import base64
 import json
 import os
+import random
 import re
 import secrets
 import sys
+import time
 import traceback
 import requests
 from datetime import datetime, timedelta
@@ -36,6 +39,56 @@ STATE_FILE = ROOT / "state" / "state.json"
 NOW = datetime.now(TZ)
 NOW_S = NOW.isoformat(timespec="seconds")
 TODAY = NOW.date().isoformat()
+START = NOW
+
+
+def tick():
+    """冲刺盯票时一轮跑好几分钟，每次检查前把"现在"更新一下。"""
+    global NOW, NOW_S, TODAY
+    NOW = datetime.now(TZ)
+    NOW_S = NOW.isoformat(timespec="seconds")
+    TODAY = NOW.date().isoformat()
+
+
+# 关注的系列：片名（中文）或英文名里出现这些词就算。网页也用这一份（写进 movies.json）。
+FOLLOW_PRESETS = {
+    "漫威": {"zh": ["漫威", "复仇者联盟", "蜘蛛侠", "钢铁侠", "美国队长", "雷神", "黑豹", "银河护卫队", "奇异博士", "蚁人",
+                   "死侍", "X战警", "神奇四侠", "雷霆特工队", "雷霆特攻队", "毒液", "刀锋战士", "永恒族", "尚气", "黑寡妇",
+                   "惊奇队长", "惊奇少女", "金刚狼", "绿巨人", "夜魔侠"],
+             "en": ["Marvel", "Avengers", "Spider-Man", "Iron Man", "Captain America", "Thor", "Black Panther",
+                    "Guardians of the Galaxy", "Doctor Strange", "Ant-Man", "Deadpool", "X-Men", "Fantastic Four",
+                    "Thunderbolts", "Venom", "Blade", "Eternals", "Shang-Chi", "Black Widow", "The Marvels",
+                    "Captain Marvel", "Wolverine", "Hulk", "Daredevil"]},
+    "DC": {"zh": ["超人", "蝙蝠侠", "神奇女侠", "海王", "闪电侠", "正义联盟", "自杀小队", "沙赞", "蓝甲虫", "绿灯侠",
+                  "女超人", "黑亚当", "泥脸"],
+           "en": ["Superman", "Batman", "Wonder Woman", "Aquaman", "The Flash", "Justice League", "Joker",
+                  "Suicide Squad", "Shazam", "Blue Beetle", "Green Lantern", "Supergirl", "Black Adam", "Clayface",
+                  "Peacemaker"]},
+}
+
+
+def _plain(s):
+    return re.sub(r"[\s·•・.\-－—_]", "", str(s or "")).lower()
+
+
+def follow_hits(rules, r):
+    """这部片命中了哪些关注（系列或影人、关键词）。r 里用到 nm / enm / dir / star。"""
+    hits = []
+    nm, enm = r.get("nm") or "", (r.get("enm") or r.get("enm_tpp") or "")
+    people = [_plain(x) for x in re.split(r"[,，/]", f"{r.get('dir') or ''},{r.get('star') or ''}") if x.strip()]
+    for rule in rules or []:
+        rule = str(rule).strip()
+        if not rule:
+            continue
+        p = FOLLOW_PRESETS.get(rule)
+        if p:
+            if any(w in nm for w in p["zh"]) or any(re.search(rf"(?<![A-Za-z]){re.escape(w)}(?![A-Za-z])", enm, re.I) for w in p["en"]):
+                hits.append(rule)
+            continue
+        k = _plain(rule)
+        if len(k) >= 2 and (k in _plain(nm) or k in _plain(enm) or any(k in x for x in people)):
+            hits.append(rule)
+    return hits
 
 
 def ts(s):
@@ -123,7 +176,10 @@ def load_watch():
         elif isinstance(x, (int, str)) and str(x).isdigit():
             stars[str(x)] = ""
     mode = w.get("ticketing") if w.get("ticketing") in ("all", "starred") else "all"
-    return stars, mode, ok
+    follow = [str(x).strip() for x in (w.get("follow") or []) if str(x).strip()]
+    mute = {str(x) for x in (w.get("mute") or [])}
+    plans = [p for p in (w.get("plans") or []) if isinstance(p, dict) and p.get("id") and p.get("date")]
+    return {"stars": stars, "mode": mode, "ok": ok, "follow": follow, "mute": mute, "plans": plans}
 
 
 def data_repo(method, path, body=None, raw=False):
@@ -182,13 +238,16 @@ class Radar:
     def __init__(self, cfg, args):
         self.cfg = cfg
         self.args = args
-        self.stars, self.ticket_mode, self.watch_ok = load_watch()
+        w = load_watch()
+        self.stars, self.ticket_mode, self.watch_ok = w["stars"], w["mode"], w["ok"]
+        self.follow, self.mute, self.plans = w["follow"], w["mute"], w["plans"]
         self.state = load_json(STATE_FILE, {})
         st = self.state
         for k, v in {"version": 2, "bootstrapped": False, "last": {}, "movies": {}, "detail_at": {},
                      "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "wiki_at": {},
                      "douban": {}, "rt": {}, "opened": {}, "cinemas_ok": {},
-                     "history": {}, "events": [], "scored": {}, "known": {}, "fails": {}}.items():
+                     "history": {}, "events": [], "scored": {}, "known": {}, "fails": {},
+                     "plan_done": {}}.items():
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
         self.events = []
@@ -210,25 +269,35 @@ class Radar:
         print(f"[{'OK' if ok else '失败'}] {src} {msg}")
 
     def watched(self, mid, nm):
-        if str(mid) in self.stars:
+        """星标的，或命中"关注的系列 / 影人"的（手动取消过的除外）。"""
+        mid = str(mid)
+        if mid in self.stars:
             return True
+        if mid in self.mute:
+            return False
         for w in self.cfg.get("watch") or []:
             w = str(w).strip()
             if not w:
                 continue
-            if w == str(mid) or norm_name(w) == norm_name(nm) or (len(w) >= 2 and w in (nm or "")):
+            if w == mid or norm_name(w) == norm_name(nm) or (len(w) >= 2 and w in (nm or "")):
                 return True
+        if self.follow:
+            r = self.state["movies"].get(mid) or {"nm": nm}
+            return bool(follow_hits(self.follow, r))
         return False
 
     def opened_anywhere(self, mid):
         return any(mid in o for o in self.state["opened"].values())
 
     def unreleased(self, mid):
-        """还没上映：上映日期是今天及以后；没有具体日期的看是否在猫眼待映列表里。"""
+        """还没上映：上映日期是今天及以后；没有具体日期的看是否在猫眼待映列表里。
+        猫眼列表里还没有、只在影院排片里出现的片子（status=cinema），排片全在明天以后才算预售。"""
         r = self.state["movies"].get(mid) or {}
         rt = r.get("rt") or ""
         if len(rt) == 10:
             return rt >= TODAY
+        if r.get("status") == "cinema":
+            return (r.get("cin_first") or "") > TODAY
         return r.get("status") == "coming"
 
     def important(self, mid, r):
@@ -257,7 +326,8 @@ class Radar:
         return [int(r["rt"][:4])] if (r.get("rt") or "")[:4].isdigit() else []
 
     def live(self):
-        return [(mid, r) for mid, r in self.state["movies"].items() if r.get("status") in ("now", "coming")]
+        return [(mid, r) for mid, r in self.state["movies"].items()
+                if r.get("status") in ("now", "coming") or (r.get("status") == "cinema" and self.unreleased(mid))]
 
     def priority(self, item):
         mid, r = item
@@ -295,7 +365,7 @@ class Radar:
         for mid, rec in mv.items():
             if mid not in seen and rec.get("status") in ("now", "coming"):
                 rec["status"] = "gone"
-        for mid in [k for k, r in mv.items() if r.get("status") == "gone"
+        for mid in [k for k, r in mv.items() if r.get("status") in ("gone", "cinema")
                     and ago(r.get("listed_at")) > timedelta(days=14)]:
             mv.pop(mid, None)
         self.state["last"]["lists"] = NOW_S
@@ -303,8 +373,10 @@ class Radar:
         if self.state["bootstrapped"]:
             for rec in new_coming[:10]:
                 mid = str(rec["id"])
+                star = self.watched(mid, rec.get("nm"))
+                # 关注的系列 / 影人有新片定档，不管"新片定档"开关都推送
                 self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=mid,
-                           push=bool(self.cfg["notify"].get("new_coming_movies")), star=self.watched(mid, rec.get("nm")))
+                           push=bool(self.cfg["notify"].get("new_coming_movies")) or star, star=star)
 
     # ------------------------------------------------------------ 猫眼详情（英文名、年份、简介等）
     def update_details(self, limit=6):
@@ -350,24 +422,40 @@ class Radar:
             first_time = not self.state["cinemas_ok"].get(cid)
             new = []
             for mid, m in data["movies"].items():
+                dates = sorted(d["date"] for d in m["days"] if d.get("date"))
+                rec = self.state["movies"].get(mid)
+                if rec is None:
+                    # 猫眼列表里还没有的片子（新片刚开预售时常这样）：先记一条，排片全在明天以后就当预售处理。
+                    # 以前这里直接记成"已上映"，会漏掉这种开票提醒。
+                    rec = self.state["movies"][mid] = {"id": int(mid), "nm": m["nm"], "img": m["img"],
+                                                       "status": "cinema", "listed_at": NOW_S,
+                                                       "cin_first": dates[0] if dates else "",
+                                                       "wish_my": m.get("wish") or 0}
+                elif rec.get("status") == "cinema":
+                    rec["listed_at"] = NOW_S
+                    if dates and (not rec.get("cin_first") or dates[0] < rec["cin_first"]):
+                        rec["cin_first"] = dates[0]
                 if mid in reg:
+                    if self.unreleased(mid):
+                        reg[mid]["shows"] = self.compact_shows(m["days"])
+                        reg[mid]["count"] = sum(len(d["shows"]) for d in m["days"])
                     continue
-                # 列表里没有的片子先补一条最基本的记录
-                self.state["movies"].setdefault(mid, {"id": int(mid), "nm": m["nm"], "img": m["img"],
-                                                      "status": "now", "listed_at": NOW_S,
-                                                      "wish_my": m.get("wish") or 0})
                 if not self.unreleased(mid):
                     continue  # 已上映的片子不管
-                dates = [d["date"] for d in m["days"]]
                 reg[mid] = {"at": "" if first_time else NOW_S, "first": dates[0] if dates else "",
-                            "count": sum(len(d["shows"]) for d in m["days"])}
+                            "count": sum(len(d["shows"]) for d in m["days"]),
+                            "shows": self.compact_shows(m["days"])}
                 if not first_time:
                     new.append((mid, m, reg[mid]))
-            # 上映超过 7 天的从登记表里清掉
+            # 上映超过 7 天的从登记表里清掉；上映了的不再留场次
+            week_ago = (NOW - timedelta(days=7)).date().isoformat()
             for mid in list(reg):
-                rt = (self.state["movies"].get(mid) or {}).get("rt") or ""
-                if len(rt) == 10 and rt < (NOW - timedelta(days=7)).date().isoformat():
+                r0 = self.state["movies"].get(mid) or {}
+                rt = r0.get("rt") or ""
+                if (len(rt) == 10 and rt < week_ago) or (not r0) or (len(rt) != 10 and (reg[mid].get("first") or "9") < week_ago):
                     reg.pop(mid)
+                elif not self.unreleased(mid):
+                    reg[mid].pop("shows", None)
             self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
             if new:
                 for mid, m, o in new:
@@ -379,8 +467,25 @@ class Radar:
                     self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
                                push=self.ticket_mode == "all" or star, star=star,
                                buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
-            n_pre = sum(1 for mid in data["movies"] if mid in reg)
+            # 只数还没上映的，和网页上"已开票"里显示的一致
+            n_pre = sum(1 for mid in data["movies"] if mid in reg and self.unreleased(mid))
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
+
+    @staticmethod
+    def compact_shows(days, max_days=4, max_per_day=40):
+        """场次表：最近几天，每场的时间、影厅、版本、语言、价格。"""
+        out = []
+        for d in sorted(days, key=lambda x: x.get("date") or "")[:max_days]:
+            shows = []
+            for p in d.get("shows")[:max_per_day]:
+                s = {"t": p.get("tm") or "", "h": p.get("th") or "", "v": p.get("tp") or "", "l": p.get("lang") or ""}
+                pr = str(p.get("pr") or "").strip()
+                if re.fullmatch(r"\d+(\.\d+)?", pr):
+                    s["p"] = pr.rstrip("0").rstrip(".") if "." in pr else pr
+                shows.append(s)
+            shows.sort(key=lambda s: s["t"])
+            out.append({"d": d.get("date"), "s": shows})
+        return out
 
     # ------------------------------------------------------------ 淘票票：只取想看人数
     def update_tpp(self):
@@ -635,7 +740,7 @@ class Radar:
         prev_days = sorted(d for d in hist if d < TODAY)
         yday = hist.get(prev_days[-1], {}) if prev_days else {}
         cinema_ids = [str(c["id"]) for c in self.cfg["cinemas"]]
-        movies = []
+        movies, details = [], {}
         for mid, r in self.live():
             tp = r.get("tpp") or {}
             wm, wt = r.get("wish_my") or 0, tp.get("wish") or 0
@@ -646,12 +751,16 @@ class Radar:
             db = st["douban"].get(mid) or {}
             rt = st["rt"].get(mid) or {}
             opened = {cid: st["opened"][cid][mid] for cid in cinema_ids if mid in st["opened"].get(cid, {})}
+            pub = r.get("pubDesc") or ""
+            tm = re.search(r"\d{4}-\d{2}-\d{2} (\d{1,2}:\d{2})", pub)
+            if r.get("dra") or r.get("video"):
+                details[mid] = {"dra": r.get("dra"), "video": r.get("video")}
             movies.append({
                 "id": r["id"], "nm": r.get("nm"), "enm": self.en_name(r).split(",")[0] or None,
                 "img": img(r.get("img")), "rt": r.get("rt"), "status": r.get("status"),
                 "unreleased": self.unreleased(mid), "ver": r.get("ver"), "cat": r.get("cat"),
                 "dir": r.get("dir"), "star": r.get("star"), "dur": r.get("dur"), "src": r.get("src"),
-                "dra": r.get("dra"), "pubDesc": r.get("pubDesc"), "video": r.get("video"),
+                "re": "重映" in pub, "rtm": tm.group(1) if tm else None, "video": bool(r.get("video")),
                 "rank": r.get("rank", 999),
                 "wish": {"maoyan": wm, "tpp": wt if tp else None},
                 "delta": {"maoyan": (wm - y[0]) if y else None,
@@ -687,8 +796,10 @@ class Radar:
 
         public = [{k: v for k, v in e.items() if not k.startswith("_")} for e in self.events]
         st["events"] = (public + [{k: v for k, v in e.items() if k != "star"} for e in st["events"]])[:150]
+        # 列表用的 movies.json 不带剧情简介和预告片地址（打开详情页时再读 details.json），首屏更快
         save_json(OUT / "movies.json", {"updated": NOW_S, "city": self.cfg["city"]["name"], "ci": self.cfg["city"]["maoyan_ci"],
-                                        "cinemas": cinemas, "movies": movies})
+                                        "cinemas": cinemas, "follow_presets": FOLLOW_PRESETS, "movies": movies})
+        save_json(OUT / "details.json", details)
         save_json(OUT / "history.json", history)
         save_json(OUT / "events.json", st["events"][:100])
         save_json(OUT / "status.json", {"updated": NOW_S, "sources": self.status}, pretty=True)
@@ -733,6 +844,21 @@ class Radar:
                          + ([f"URL:{link}"] if link else [])
                          + ["BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{ics_text('明天 ' + summary)}", "TRIGGER:-PT4H", "END:VALARM",
                             "END:VEVENT"])
+        # 观影计划：带具体时间的日程
+        plan_of = {}
+        for p in self.plans:
+            start = self.plan_start(p)
+            if not start or start < NOW - timedelta(days=2):
+                continue
+            mv0 = next((m for m in movies if str(m["id"]) == str(p.get("mid"))), None)
+            dur = int((mv0 or {}).get("dur") or p.get("dur") or 120)
+            u0, u1 = start.astimezone(ZoneInfo("UTC")), (start + timedelta(minutes=dur + 15)).astimezone(ZoneInfo("UTC"))
+            where = " ".join(x for x in (p.get("cinema"), p.get("seat")) if x)
+            lines.extend(["BEGIN:VEVENT", f"UID:plan-{p['id']}@movie-radar", f"DTSTAMP:{stamp}",
+                          f"DTSTART:{u0:%Y%m%dT%H%M%SZ}", f"DTEND:{u1:%Y%m%dT%H%M%SZ}",
+                          f"SUMMARY:{ics_text('🍿 《' + (p.get('nm') or '') + '》')}",
+                          f"LOCATION:{ics_text(where)}", f"DESCRIPTION:{ics_text('观影计划 · 电影雷达')}", "END:VEVENT"])
+            plan_of.setdefault(str(p.get("mid")), f"{start:%-m.%d %H:%M}")
         items = []
         for m in starred:
             mid, rt, op = str(m["id"]), m.get("rt") or "", m.get("opened") or {}
@@ -745,12 +871,93 @@ class Radar:
                         day(o["first"], f"pre-{mid}-{c}", f"《{m['nm']}》{short.get(c, c)}提前场", f"正式上映 {md(rt)}\n{link}", link)
             if m.get("unreleased"):
                 items.append({"id": m["id"], "nm": m["nm"], "img": m["img"], "rt": rt, "wish": m["wish"]["maoyan"],
-                              "opened": [{"c": short.get(c, c), "first": o.get("first")} for c, o in op.items()]})
+                              "opened": [{"c": short.get(c, c), "first": o.get("first")} for c, o in op.items()],
+                              "plan": plan_of.get(mid)})
         lines.append("END:VCALENDAR")
         (cal / f"{secret}.ics").write_text("\r\n".join(ics_fold(x) for x in lines) + "\r\n", "utf-8")
         items.sort(key=lambda x: (x["rt"] if len(x["rt"]) == 10 else (x["rt"] or "9999") + "-99"))
         save_json(cal / f"{secret}.json", {"updated": NOW_S, "site": url, "items": items})
         print(f"  日历：星标 {len(starred)} 部，待映 {len(items)} 部")
+
+    # ------------------------------------------------------------ 观影计划：开场前一小时左右提醒
+    @staticmethod
+    def plan_start(p):
+        try:
+            t = (p.get("time") or "").strip() or "00:00"
+            return datetime.fromisoformat(f"{p['date']}T{t}").replace(tzinfo=TZ)
+        except (KeyError, ValueError):
+            return None
+
+    def check_plans(self, lead=70):
+        """只推送，不写进公开的动态列表（计划是私密的）。"""
+        done = self.state["plan_done"]
+        for k in [k for k, v in done.items() if ago(v) > timedelta(days=3)]:
+            done.pop(k, None)
+        if self.args.dry_run:
+            return
+        url = site_url(self.cfg)
+        for p in self.plans:
+            start = self.plan_start(p)
+            if not start or not (p.get("time") or "").strip() or str(p["id"]) in done:
+                continue
+            left = start - NOW
+            if timedelta(0) < left <= timedelta(minutes=lead):
+                mins = int(left.total_seconds() // 60)
+                where = " · ".join(x for x in (p.get("cinema"), p.get("seat")) if x)
+                body = f"《{p.get('nm') or ''}》{p.get('time')} 开场" + (f"\n{where}" if where else "")
+                notify.push(f"🍿 还有 {mins} 分钟开场" if mins < 60 else "🍿 一小时后开场", body,
+                            f"{url}#m{p['mid']}" if url and p.get("mid") else url, "timeSensitive")
+                done[str(p["id"])] = NOW_S
+
+    # ------------------------------------------------------------ 冲刺盯票
+    def sprint_targets(self):
+        """星标（含关注命中）、还没上映、离上映不到 N 天、还有影院没开票的片子。"""
+        sp = self.cfg.get("sprint") or {}
+        if sp.get("enabled") is False or not self.watch_ok:
+            return []
+        days = int(sp.get("days_before", 30))
+        cids = [str(c["id"]) for c in self.cfg["cinemas"]]
+        out = []
+        for mid, r in self.live():
+            rt = r.get("rt") or ""
+            if len(rt) != 10 or not self.unreleased(mid) or not self.watched(mid, r.get("nm")):
+                continue
+            left = (datetime.fromisoformat(rt).date() - NOW.date()).days
+            if 0 <= left <= days and any(mid not in self.state["opened"].get(c, {}) for c in cids):
+                out.append(r.get("nm"))
+        return out
+
+    def sprint(self):
+        """星标电影快上映、还没开票时：这一轮不马上结束，每隔 1 分钟左右再查一次两家影院，
+        查到开票立刻推送。外部定时每 5 分钟叫一次，所以几乎不间断。只查影院排片，不碰别的接口。"""
+        sp = self.cfg.get("sprint") or {}
+        budget = int(sp.get("seconds", 225))
+        gap = int(sp.get("interval_seconds", 70))
+        targets = self.sprint_targets()
+        if not targets or self.args.dry_run or self.args.no_sprint:
+            return
+        print(f"  冲刺盯票：{len(targets)} 部")
+        rounds = fails = 0
+        while True:
+            left = budget - (datetime.now(TZ) - START).total_seconds()
+            if left < gap + 15:
+                break
+            time.sleep(gap + random.uniform(-8, 8))
+            tick()
+            self.events = []
+            self.update_cinemas()
+            rounds += 1
+            bad = [c for c in self.cfg["cinemas"] if not self.status.get(f"cinema:{c['id']}", {}).get("ok")]
+            fails = fails + 1 if bad else 0
+            self.check_plans()
+            if self.events:
+                self.write_outputs()
+                self.send()
+            if fails >= 2 or not self.sprint_targets():
+                break   # 连着失败两次（可能被限流）就先停，下一轮再说
+        self.mark("sprint", True, f"冲刺盯票 {rounds} 次")
+        self.events = []
+        self.write_outputs()
 
     # ------------------------------------------------------------ 推送
     def send(self):
@@ -810,8 +1017,11 @@ class Radar:
             self.events = [{"at": NOW_S, "type": "system", "title": "✅ 电影雷达已启动",
                             "body": f"正在盯 {len(self.cfg['cinemas'])} 家影院（未上映已开票 {n} 部），"
                                     f"之后有新片开票会第一时间提醒你"}]
+        self.check_plans()
         self.write_outputs()
         self.send()
+        self.events = []
+        self.sprint()
 
 
 def main():
@@ -819,6 +1029,7 @@ def main():
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--test-push", action="store_true")
+    ap.add_argument("--no-sprint", action="store_true", help="不进入冲刺盯票")
     args = ap.parse_args()
     cfg = load_json(ROOT / "config.json", None)
     if not cfg:

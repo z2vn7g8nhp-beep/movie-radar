@@ -28,5 +28,11 @@
     "lists": 25,
     "tpp": 25,
     "imdb": 180
+  },
+  "sprint": {
+    "enabled": true,
+    "days_before": 30,
+    "interval_seconds": 70,
+    "seconds": 225
   }
 }

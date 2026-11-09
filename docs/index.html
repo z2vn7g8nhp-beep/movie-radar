@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <title>电影雷达</title>
+<script>try{document.documentElement.dataset.theme=JSON.parse(localStorage.getItem("radar.theme")||'"doom"')}catch(e){document.documentElement.dataset.theme="doom"}</script>
 <style>
 :root{
   --bg:#f6f6f9;
@@ -38,6 +39,11 @@
   --st:env(safe-area-inset-top,0px);
   --sb:env(safe-area-inset-bottom,0px);
   --pad:20px;
+  --bg-rgb:246,246,249;
+  --acc-rgb:255,92,43;
+  --acc-grad:linear-gradient(180deg,#ff7d52,#ff5c2b);
+  --score-bg:#fff6e0; --score-ink:#a77400;
+  --title-font:var(--sans); --title-w:600; --title-ls:-.01em;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
@@ -55,11 +61,11 @@ img{display:block}
 
 /* ---------- 顶栏 ---------- */
 .bar{position:sticky;top:0;z-index:5;padding:calc(var(--st) + 12px) var(--pad) 10px;
-  background:rgba(246,246,249,.8);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);
+  background:rgba(var(--bg-rgb),.8);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);
   border-bottom:.5px solid transparent;transition:border-color .2s}
 .bar.scrolled{border-bottom-color:var(--hair)}
 .bar-row{display:flex;align-items:center;gap:8px}
-.bar h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.bar h1{margin:0;font-size:26px;font-weight:var(--title-w);font-family:var(--title-font);letter-spacing:var(--title-ls);line-height:1.2}
 .bar .sub{color:var(--faint);font-size:12px;margin-top:1px}
 .bar h1,.bar .sub{transition:font-size .25s,opacity .2s,height .2s}
 .bar.scrolled h1{font-size:17px}
@@ -79,7 +85,7 @@ img{display:block}
   background:rgba(255,255,255,.93);-webkit-backdrop-filter:saturate(1.8) blur(24px);backdrop-filter:saturate(1.8) blur(24px);
   box-shadow:0 10px 30px rgba(24,26,48,.12),inset 0 0 0 .5px rgba(24,26,48,.06)}
 .tabfade{position:fixed;left:0;right:0;bottom:0;height:calc(110px + var(--sb));z-index:5;pointer-events:none;
-  background:linear-gradient(rgba(246,246,249,0),rgba(246,246,249,.85) 45%,rgba(246,246,249,.98))}
+  background:linear-gradient(rgba(var(--bg-rgb),0),rgba(var(--bg-rgb),.85) 45%,rgba(var(--bg-rgb),.98))}
 .tab-ind{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:21px;background:var(--coral-bg);z-index:0;
   transition:transform .5s cubic-bezier(.3,1.25,.45,1),width .35s cubic-bezier(.3,1.25,.45,1)}
 .tabs button{z-index:1}
@@ -101,7 +107,7 @@ img{display:block}
 .tk.big b{font-size:13px}
 .pw .tk{background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .tk.new{animation:pulse 2.4s ease-in-out 2}
-@keyframes pulse{50%{box-shadow:inset 0 0 0 .5px var(--coral-line),0 0 0 4px rgba(255,106,61,.15)}}
+@keyframes pulse{50%{box-shadow:inset 0 0 0 .5px var(--coral-line),0 0 0 4px rgba(var(--acc-rgb),.15)}}
 
 /* ---------- 评分 ---------- */
 .rates{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -119,7 +125,7 @@ img{display:block}
 .hero-dots i.on{width:14px;background:var(--coral)}
 .hero{position:relative;margin:6px 16px 6px;border-radius:24px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
 .hero-empty{display:flex;gap:14px;align-items:center;margin:6px 16px 4px;padding:16px 18px;border-radius:20px;background:var(--card);box-shadow:0 1px 2px rgba(24,26,48,.04)}
-.hero-empty .ic{width:40px;height:40px;border-radius:20px;background:#fff6e0;color:var(--gold);display:grid;place-items:center;flex:none}
+.hero-empty .ic{width:40px;height:40px;border-radius:20px;background:var(--score-bg);color:var(--gold);display:grid;place-items:center;flex:none}
 .hero-empty .ic svg{width:20px;height:20px}
 .hero-empty b{display:block;font-size:15px;font-weight:500}
 .hero-empty span{display:block;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.5}
@@ -127,7 +133,7 @@ img{display:block}
 .hero-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.55),rgba(255,255,255,.15))}
 .hero-in{position:relative;display:grid;grid-template-columns:108px 1fr;gap:18px;align-items:center;padding:18px;width:100%}
 .hero-poster{width:108px;aspect-ratio:2/3;border-radius:12px;object-fit:cover;background:var(--soft);box-shadow:0 12px 28px rgba(24,26,48,.22)}
-.hero-why{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#a77400;font-weight:500;margin-bottom:4px}
+.hero-why{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--score-ink);font-weight:500;margin-bottom:4px}
 .hero-why svg{width:11px;height:11px;color:var(--gold)}
 .hero h2{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.2;margin:0 0 2px;letter-spacing:.02em}
 .hero .en{font-family:var(--latin);font-style:italic;color:var(--ink-2);font-size:13px;margin-bottom:10px;line-height:1.3}
@@ -248,7 +254,7 @@ img{display:block}
 .ev .bd{color:var(--dim);font-size:12.5px;margin-top:2px;white-space:pre-line;line-height:1.45}
 .ev .kind{flex:none;font-style:normal;font-size:10px;font-weight:600;line-height:17px;padding:0 6px;border-radius:5px;background:var(--soft);color:var(--dim)}
 .ev .kind.ticketing{background:var(--coral-bg);color:var(--coral-ink)}
-.ev .kind.score{background:#fff6e0;color:#a77400}
+.ev .kind.score{background:var(--score-bg);color:var(--score-ink)}
 .ev .kind.coming{background:#eaf1ff;color:#3a62c9}
 .ev .kind.health{background:#ffeceb;color:var(--warn)}
 .ev time{font-family:var(--num);font-size:12px;color:var(--faint);white-space:nowrap;align-self:start;margin-top:3px}
@@ -276,7 +282,7 @@ img{display:block}
 .sheet.on{transform:none;visibility:visible}
 .sbar{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;padding:calc(var(--st) + 10px) 14px 0;height:0;overflow:visible}
 .sbar:before{content:"";position:absolute;left:0;right:0;top:0;height:calc(var(--st) + 54px);pointer-events:none;opacity:0;transition:opacity .25s;
-  background:rgba(246,246,249,.84);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);box-shadow:0 .5px 0 var(--hair)}
+  background:rgba(var(--bg-rgb),.84);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);box-shadow:0 .5px 0 var(--hair)}
 .sbar.solid:before{opacity:1}
 .sbar .st{position:absolute;left:96px;right:96px;top:calc(var(--st) + 10px);height:34px;line-height:34px;text-align:center;font-size:15px;font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s;pointer-events:none}
@@ -341,7 +347,7 @@ a.cl:active{transform:scale(.98)}
 .links a:first-child{background:var(--coral);color:#fff}
 
 /* ---------- 设置 ---------- */
-.set .sheet-bar{position:sticky;top:0;z-index:2;padding:calc(var(--st) + 10px) 14px 6px;background:rgba(246,246,249,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.set .sheet-bar{position:sticky;top:0;z-index:2;padding:calc(var(--st) + 10px) 14px 6px;background:rgba(var(--bg-rgb),.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .set .sheet-bar button{height:34px;padding:0 16px;border-radius:17px;background:var(--card);font-weight:500;box-shadow:0 1px 3px rgba(24,26,48,.08)}
 .set h2{font-size:28px;font-weight:600;margin:6px var(--pad) 4px}
 .set .lead{color:var(--dim);font-size:14px;margin:0 var(--pad) 6px}
@@ -356,9 +362,9 @@ a.cl:active{transform:scale(.98)}
 .field{display:flex;gap:8px}
 .field input{flex:1;min-width:0;background:var(--bg);border:.5px solid var(--hair);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;white-space:nowrap;min-height:44px;padding:0 20px;border-radius:14px;
-  background:linear-gradient(180deg,#ff7d52,#ff5c2b);color:#fff;font-weight:600;font-size:15px;letter-spacing:.02em;
-  box-shadow:0 6px 16px rgba(255,92,43,.26),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .18s cubic-bezier(.3,.7,.4,1),box-shadow .2s,opacity .2s}
-.btn:active{transform:scale(.96);box-shadow:0 3px 8px rgba(255,92,43,.22),inset 0 1px 0 rgba(255,255,255,.2)}
+  background:var(--acc-grad);color:#fff;font-weight:600;font-size:15px;letter-spacing:.02em;
+  box-shadow:0 6px 16px rgba(var(--acc-rgb),.26),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .18s cubic-bezier(.3,.7,.4,1),box-shadow .2s,opacity .2s}
+.btn:active{transform:scale(.96);box-shadow:0 3px 8px rgba(var(--acc-rgb),.22),inset 0 1px 0 rgba(255,255,255,.2)}
 .btn.ghost{background:var(--card);color:var(--ink);font-weight:500;box-shadow:0 1px 3px rgba(24,26,48,.08),inset 0 0 0 .5px var(--hair)}
 .btn.ghost:active{box-shadow:0 1px 2px rgba(24,26,48,.06),inset 0 0 0 .5px var(--hair)}
 .btn:disabled{opacity:.55}
@@ -546,7 +552,7 @@ a.cl:active{transform:scale(.98)}
 .reveal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;visibility:hidden}
 .reveal.on{visibility:visible}
 .rv-back{--t1:#ffe3d6;--t2:#e3ecff;position:absolute;inset:0;opacity:0;transition:opacity .35s;
-  background:radial-gradient(70% 45% at 20% 18%,var(--t1),transparent 70%),radial-gradient(60% 45% at 85% 80%,var(--t2),transparent 70%),rgba(246,246,249,.78);
+  background:radial-gradient(70% 45% at 20% 18%,var(--t1),transparent 70%),radial-gradient(60% 45% at 85% 80%,var(--t2),transparent 70%),rgba(var(--bg-rgb),.78);
   -webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}
 .reveal.on .rv-back{opacity:1}
 .rv-in{position:relative;width:100%;max-width:440px;padding:0 18px;max-height:100vh;overflow-y:auto;padding-top:calc(var(--st) + 24px);padding-bottom:calc(var(--sb) + 24px)}
@@ -626,7 +632,7 @@ a.cl:active{transform:scale(.98)}
 .rp-bars{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:84px;margin-top:12px}
 .rp-bars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
 .rp-bars i{display:block;width:100%;border-radius:4px 4px 2px 2px;background:var(--soft);min-height:3px}
-.rp-bars i.on{background:linear-gradient(180deg,#ff8a5c,#ff5c2b)}
+.rp-bars i.on{background:var(--acc-grad)}
 .rp-bars small{font-size:9px;color:var(--faint);font-family:var(--num)}
 .rp-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px}
 .rp-wk div{text-align:center;font-size:11px;color:var(--faint)}
@@ -651,12 +657,153 @@ a.cl:active{transform:scale(.98)}
 
 @media (prefers-reduced-motion:reduce){.stub-wrap,.stamp,.sheen,.rv-badge,.medal,.mw:before{animation:none!important}}
 
+/* ================= v2：已开票并入待映、场次表、计划、关注、票根背面 ================= */
+.hero{--ht:#ffffff}
+.hero-bg{opacity:.34}
+.hero-bg:after{background:linear-gradient(120deg,color-mix(in srgb,var(--ht) 92%,transparent),rgba(255,255,255,.62) 72%)}
+.hero .tk.mine{background:var(--coral);color:#fff;box-shadow:none}
+.hero .tk.mine b{color:#fff}
+.vb.re{background:var(--coral);color:#fff}
+.vbs .vb.re{background:var(--coral-bg);color:var(--coral-ink);box-shadow:inset 0 0 0 1px var(--coral-line)}
+.chk.inline{margin:0 0 10px;padding:0 var(--pad)}
+.quiet{padding:0 var(--pad);margin:-2px 0 4px;color:var(--faint);font-size:12px}
+/* 架子末尾的"全部" */
+.more-card{flex:none;width:86px;aspect-ratio:2/3;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:var(--card);box-shadow:inset 0 0 0 1px var(--hair);color:var(--ink-2);font-size:12px;text-align:center}
+.more-card b{font-family:var(--num);font-size:22px;font-weight:300;color:var(--ink)}
+.doomcd{display:none}
+.doomcd[hidden]{display:none!important}
+
+/* 详情：影院 + 场次 */
+.cbox{margin:18px 16px 0;background:var(--card);border-radius:20px;padding:4px 16px 8px;box-shadow:0 1px 2px rgba(24,26,48,.04)}
+.cb-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0 10px;border-top:.5px solid var(--hair)}
+.cb-row:first-child{border-top:0}
+.cb-row .n{font-weight:600;font-size:15px;white-space:nowrap;flex:none}
+.cb-row .i{font-size:12px;color:var(--dim);text-align:right;min-width:0}
+.cb-row.open .i{color:var(--coral-ink);font-weight:500}
+.cb-row.wait .i{color:var(--faint)}
+.dchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px 8px;padding:0 2px}
+.dchips::-webkit-scrollbar{display:none}
+.dchips button{flex:none;height:28px;padding:0 11px;border-radius:14px;background:var(--soft);font-size:12px;color:var(--ink-2)}
+.dchips button[aria-pressed=true]{background:var(--ink);color:var(--bg);font-weight:500}
+.shows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-bottom:8px}
+.shows[hidden]{display:none}
+.show{display:flex;flex-direction:column;align-items:flex-start;padding:8px 10px;border-radius:12px;background:var(--bg);min-width:0;transition:transform .15s}
+.show:active{transform:scale(.96)}
+.show b{font-family:var(--num);font-size:17px;font-weight:500;line-height:1.15}
+.show span,.show small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.show span{font-size:11px;color:var(--ink-2);margin-top:2px}
+.show small{font-size:10px;color:var(--faint)}
+.show.pm{background:var(--coral-bg);box-shadow:inset 0 0 0 .5px var(--coral-line)}
+.show.pm span{color:var(--coral-ink);font-weight:500}
+.myplan{display:flex;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border-radius:14px;background:var(--coral);color:#fff;width:100%;text-align:left}
+.myplan svg{width:18px;height:18px;flex:none}
+.myplan b{display:block;font-size:14px}
+.myplan span{display:block;font-size:12px;opacity:.85}
+
+/* 详情：底部浮动操作 */
+.dock{position:sticky;bottom:0;z-index:2;display:flex;gap:8px;padding:18px 16px calc(12px + var(--sb));margin-top:18px;
+  background:linear-gradient(rgba(var(--bg-rgb),0),rgba(var(--bg-rgb),.94) 34%)}
+.dock .btn{flex:1;height:50px;border-radius:16px;padding:0 12px}
+.dock .btn.ghost{flex:none;width:50px;padding:0}
+.dock .btn svg{width:20px;height:20px}
+.sheet{padding-bottom:0}
+.sheet .tip{margin-bottom:calc(30px + var(--sb))}
+.sheet .dock + .tip{margin-top:0}
+.minilinks{display:flex;gap:6px;flex-wrap:wrap}
+.minilinks a{height:30px;display:inline-flex;align-items:center;padding:0 12px;border-radius:15px;background:var(--card);font-size:12.5px;color:var(--ink-2);box-shadow:inset 0 0 0 .5px var(--hair)}
+/* 预告片：海报上点播放，原地放 */
+.cover-poster .play{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:var(--ink);box-shadow:0 8px 22px rgba(0,0,0,.25);z-index:2}
+.cover-poster .play svg{width:20px;height:20px;margin-left:3px}
+.cover-poster{transition:width .45s cubic-bezier(.22,1,.36,1),aspect-ratio .45s cubic-bezier(.22,1,.36,1)}
+.cover-poster.vid{width:calc(100% - 32px);aspect-ratio:16/9;background:#000!important}
+.cover-poster video{width:100%;height:100%;display:block;background:#000}
+/* 影人：点一下关注 */
+.pps{display:flex;flex-wrap:wrap;gap:4px 6px}
+.pp{font-size:14px;color:var(--ink-2);padding:1px 0;border-bottom:1px dashed var(--hair)}
+.pp.on{color:var(--coral-ink);border-bottom-color:var(--coral-line);font-weight:500}
+.pp.on:after{content:" ✓";font-size:11px}
+
+/* 底部小菜单 */
+.menu-btns{display:grid;gap:8px;margin-top:6px}
+.menu-btns .btn{width:100%;height:50px}
+
+/* 票夹：观影计划 */
+.plans{margin:4px 16px 0;display:grid;gap:8px}
+.plan{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 14px 10px 10px;border-radius:18px;background:var(--card);box-shadow:0 1px 2px rgba(24,26,48,.04);width:100%;text-align:left}
+.plan img{width:44px;height:64px;border-radius:8px;object-fit:cover;background:var(--soft)}
+.plan .t{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan .s{font-size:12px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan .when{text-align:right;line-height:1.2}
+.plan .when b{display:block;font-family:var(--num);font-size:20px;font-weight:300;color:var(--coral-ink)}
+.plan .when small{font-size:11px;color:var(--faint)}
+.plan.done{background:var(--coral-bg);box-shadow:inset 0 0 0 .5px var(--coral-line)}
+.plan .go{font-size:12px;font-weight:600;color:#fff;background:var(--coral);border-radius:999px;padding:7px 12px;white-space:nowrap}
+
+/* 设置：关注 */
+.follows{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.follows .chip{display:inline-flex;align-items:center;gap:4px}
+.follows .chip i{font-style:normal;opacity:.55;font-size:15px;margin-left:2px}
+
+/* 票根翻面 */
+.flip{perspective:1400px;cursor:pointer}
+.flip-in{display:grid;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,1.25,.45,1)}
+.flip.on .flip-in{transform:rotateY(180deg)}
+.flip .face{grid-area:1/1;-webkit-backface-visibility:hidden;backface-visibility:hidden;min-width:0}
+.flip .face.back{transform:rotateY(180deg)}
+.stub-back{position:relative;height:100%;min-height:150px;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#fff,var(--bg));
+  box-shadow:0 1px 1px rgba(24,26,48,.05),0 10px 18px rgba(24,26,48,.10),inset 0 0 0 .5px var(--hair);display:flex;flex-direction:column;padding:10px}
+.stub-back .ph{flex:1;min-height:0;border-radius:9px;overflow:hidden;background:var(--soft);position:relative}
+.stub-back .ph img{width:100%;height:100%;object-fit:cover}
+.stub-back .add{flex:1;border-radius:9px;border:1.5px dashed var(--hair);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--ink-2);font-size:14px;font-weight:500}
+.stub-back .add small{font-size:11px;color:var(--faint);font-weight:400}
+.stub-back .bk-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim);padding:8px 2px 0}
+.stub-back .bk-foot button{font-size:11px;color:var(--coral-ink);font-weight:500}
+.fliphint{text-align:center;font-size:12px;color:var(--faint);margin:10px 0 0}
+
+/* ================= 复联5 主题：雾银底、斗篷绿、锻铜 ================= */
+html[data-theme=doom]{
+  --bg:#eef1ec; --bg-rgb:238,241,236; --card:#fbfcfa; --soft:#e2e7e1; --hair:rgba(26,33,29,.10);
+  --ink:#1a211d; --ink-2:#45504a; --dim:#75807a; --faint:#a3aca6;
+  --coral:#1f6b47; --coral-ink:#154a31; --coral-bg:#e3f0e8; --coral-line:#bfd9c9;
+  --gold:#b88a4a; --acc-rgb:31,107,71; --acc-grad:linear-gradient(180deg,#2c7f57,#185a3a);
+  --score-bg:#f2eadb; --score-ink:#86622c;
+  --shadow:0 1px 2px rgba(21,48,33,.06),0 10px 26px rgba(21,48,33,.10);
+  --title-font:var(--serif); --title-w:700; --title-ls:.08em;
+  background:radial-gradient(110% 38% at 0% 0%,#dce9e0 0%,rgba(220,233,224,0) 70%) no-repeat,#eef1ec;
+}
+html[data-theme=doom] body{background:transparent}
+html[data-theme=doom] .bar{background:rgba(var(--bg-rgb),.82)}
+/* 锻铜细线：只在顶部星标卡上用一次 */
+html[data-theme=doom] .hero{box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 14px 34px rgba(21,74,49,.15),0 0 0 .5px rgba(26,33,29,.08)}
+html[data-theme=doom] .hero:after{content:"";position:absolute;inset:6px;border-radius:19px;border:1px solid rgba(169,129,74,.42);pointer-events:none;
+  -webkit-mask:linear-gradient(135deg,#000,rgba(0,0,0,.35) 45%,#000);mask:linear-gradient(135deg,#000,rgba(0,0,0,.35) 45%,#000)}
+html[data-theme=doom] .hero-bg{opacity:.28;filter:blur(40px) saturate(.9)}
+html[data-theme=doom] .hero-bg:after{background:linear-gradient(120deg,color-mix(in srgb,var(--ht) 55%,#eef4ef),rgba(251,252,250,.7) 70%)}
+html[data-theme=doom] .hero-cd b{font-family:var(--serif);font-weight:600;letter-spacing:0;
+  background:linear-gradient(180deg,#c7a067,#7d5a2a);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme=doom] .hero h2{letter-spacing:.06em}
+html[data-theme=doom] .hero-why{color:var(--score-ink)}
+html[data-theme=doom] .tabs{background:rgba(251,252,250,.94)}
+html[data-theme=doom] .tab-ind{background:linear-gradient(180deg,#e9f2ec,#d8e8de);box-shadow:inset 0 0 0 .5px rgba(169,129,74,.45)}
+html[data-theme=doom] .tabs .n{background:#9b3b2e}
+html[data-theme=doom] .sec h3,html[data-theme=doom] .day .d{font-family:var(--serif);letter-spacing:.04em}
+html[data-theme=doom] .doomcd{display:inline-flex;align-items:baseline;gap:4px;margin-left:10px;vertical-align:4px;font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0;
+  color:var(--score-ink);padding:2px 8px;border-radius:9px;background:var(--score-bg);box-shadow:inset 0 0 0 .5px rgba(169,129,74,.4)}
+html[data-theme=doom] .doomcd b{font-family:var(--num);font-size:12px;font-weight:600}
+html[data-theme=doom] .bar.scrolled .doomcd{display:none}
+html[data-theme=doom] .yr-card{background:radial-gradient(90% 140% at 0% 0%,#d9eadf,transparent 60%),radial-gradient(80% 140% at 100% 100%,#efe5d3,transparent 60%),var(--card)}
+html[data-theme=doom] .rv-back{--t1:#d8e9de;--t2:#efe6d4}
+html[data-theme=doom] .rec-btn{background:var(--coral-ink)}
+html[data-theme=doom] .toast button{color:#9fd3b4}
+
 </style>
 </head>
 <body>
 <header class="bar" id="bar">
   <div class="bar-row">
-    <div style="flex:1;min-width:0"><h1 id="title">即将上映</h1><div class="sub" id="sub">加载中…</div></div>
+    <div style="flex:1;min-width:0"><h1><span id="title">即将上映</span><span class="doomcd" id="doomcd" hidden></span></h1><div class="sub" id="sub">加载中…</div></div>
     <button class="icon-btn" id="searchBtn" aria-label="搜索" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
     <button class="icon-btn" id="openSettings" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
   </div>
@@ -668,7 +815,6 @@ a.cl:active{transform:scale(.98)}
 <div class="tabfade"></div>
 <nav class="tabs" role="tablist"><span class="tab-ind" id="tabInd"></span>
   <button role="tab" data-tab="coming" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></svg>待映</button>
-  <button role="tab" data-tab="opened" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8.5a2 2 0 0 0 0 4v0a2 2 0 0 0 0 4V19h18v-2.5a2 2 0 0 1 0-4 2 2 0 0 1 0-4V6H3z" transform="translate(0 -.5)"/><path d="M15 7v11" stroke-dasharray="1.5 2.5"/></svg>已开票</button>
   <button role="tab" data-tab="now" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>热映</button>
   <button role="tab" data-tab="wallet" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="2.5"/><path d="M6 8V6.5A1.5 1.5 0 0 1 7.5 5h9A1.5 1.5 0 0 1 18 6.5V8"/><path d="M8 5V3.8M16 5V3.8"/><path d="M3.5 13h17" stroke-dasharray="1.5 2.5"/></svg>票夹</button>
   <button role="tab" data-tab="feed" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 10a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 15 6 10"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>动态<span class="n" id="feedBadge" hidden></span></button>
@@ -685,7 +831,7 @@ a.cl:active{transform:scale(.98)}
 // 电影雷达 · 主屏小组件（Scriptable）
 // 小号：最近一部星标待映；中号 / 大号：星标待映列表。点一下打开电影雷达。
 const FEED = "%FEED%";
-const BG = new Color("#f6f6f9"), INK = new Color("#1c1d24"), DIM = new Color("#7c7f8c"), CORAL = new Color("#e8552a");
+const BG = new Color("#eef1ec"), INK = new Color("#1a211d"), DIM = new Color("#75807a"), CORAL = new Color("#1f6b47");
 
 function daysTo(rt) {
   if (!rt || rt.length !== 10) return null;
@@ -699,6 +845,7 @@ function when(rt) {
   return n <= 0 ? "今天" : n === 1 ? "明天" : `${n} 天`;
 }
 function ticket(it) {
+  if (it.plan) return "已买票 " + it.plan;
   return it.opened.length ? it.opened.map(o => `${o.c.split(/\s/)[0].slice(0, 4)} ${md(o.first)}`).join(" · ") + " 开票" : "还没开票";
 }
 async function load() {
@@ -741,7 +888,7 @@ if (!items.length) {
   w.addSpacer(2);
   const nm = w.addText(it.nm); nm.font = Font.semiboldSystemFont(15); nm.textColor = INK; nm.lineLimit = 2;
   w.addSpacer(4);
-  const tk = w.addText(ticket(it)); tk.font = Font.systemFont(11); tk.textColor = it.opened.length ? CORAL : DIM; tk.lineLimit = 1;
+  const tk = w.addText(ticket(it)); tk.font = Font.systemFont(11); tk.textColor = it.plan || it.opened.length ? CORAL : DIM; tk.lineLimit = 1;
 } else {
   head("★ 星标待映");
   w.addSpacer(8);
@@ -752,7 +899,7 @@ if (!items.length) {
     if (img) { const p = r.addImage(img); p.imageSize = new Size(26, 38); p.cornerRadius = 4; }
     const col = r.addStack(); col.layoutVertically();
     const nm = col.addText(it.nm); nm.font = Font.semiboldSystemFont(13); nm.textColor = INK; nm.lineLimit = 1;
-    const tk = col.addText(ticket(it)); tk.font = Font.systemFont(10.5); tk.textColor = it.opened.length ? CORAL : DIM; tk.lineLimit = 1;
+    const tk = col.addText(ticket(it)); tk.font = Font.systemFont(10.5); tk.textColor = it.plan || it.opened.length ? CORAL : DIM; tk.lineLimit = 1;
     r.addSpacer();
     const d = r.addText(when(it.rt)); d.font = Font.mediumSystemFont(14); d.textColor = INK;
     w.addSpacer(fam === "large" ? 9 : 6);
@@ -772,6 +919,33 @@ function getPref(k, d){ try { const v = localStorage.getItem("radar." + k); retu
 function setPref(k, v){ try { localStorage.setItem("radar." + k, JSON.stringify(v)); } catch {} }
 const S = { tab: "coming", q: "", limit: 60, data: null, hist: {}, events: [], status: {},
   local: new Set(getPref("favs", []).map(String)), watch: null, sha: null };
+
+/* ---------- 主题 ---------- */
+S.theme = getPref("theme", "doom");
+function applyTheme(){
+  document.documentElement.dataset.theme = S.theme;
+  const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = S.theme === "doom" ? "#eef1ec" : "#f6f6f9";
+}
+applyTheme();
+/* 复联5 主题：标题旁边的上映倒计时 */
+function doomCountdown(){
+  const el = $("#doomcd"); if (!el) return;
+  const m = S.theme === "doom" && S.tab === "coming" && !S.q && S.data && S.data.movies.find(x => x.id === 1474442 || /复仇者联盟5|Avengers: Doomsday/.test(x.nm + (x.enm || "")));
+  const n = m && m.unreleased && m.rt && m.rt.length === 10 ? daysTo(m.rt) : null;
+  el.hidden = n == null || n < 0;
+  if (!el.hidden) el.innerHTML = n === 0 ? "复联5 今天上映" : `复联5 还有 <b>${n}</b> 天`;
+}
+/* 顶部星标卡：底色取海报的颜色（取一次存起来） */
+async function paintHeroTints(){
+  const els = [...document.querySelectorAll(".hero[data-tint]")].filter(x => !x.style.getPropertyValue("--ht"));
+  for (const el of els) {
+    const m = movieOf(el.dataset.tint); if (!m) continue;
+    const look = await tintOf(m.img); if (look.h === 16 && look.s === 90) continue;   // 取色失败
+    const t = `hsl(${look.h} ${Math.min(60, look.s)}% 90%)`, all = getPref("tints", {});
+    all[m.id] = t; const ks = Object.keys(all); if (ks.length > 60) delete all[ks[0]];
+    setPref("tints", all); el.style.setProperty("--ht", t);
+  }
+}
 
 /* ---------- 小工具 ---------- */
 if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r){
@@ -803,14 +977,56 @@ function dayLabel(d){ const r = relWord(daysTo(d)); return r && daysTo(d) < 3 ? 
 function versions(m){ const v = (m.ver || "").toLowerCase(), out = [];
   if (/imax/.test(v)) out.push("IMAX"); if (/杜比|dolby/.test(v)) out.push("杜比"); if (/cinity/.test(v)) out.push("CINITY");
   if (/巨幕|cgs/.test(v)) out.push("巨幕"); if (/3d/.test(v)) out.push("3D"); return out; }
-const vbs = (m, n = 3) => { const v = versions(m).slice(0, n); return v.length ? `<span class="vbs">${v.map(x => `<span class="vb">${x}</span>`).join("")}</span>` : ""; };
+const vbs = (m, n = 3) => { const v = [...(m.re ? ["重映"] : []), ...versions(m)].slice(0, n); return v.length ? `<span class="vbs">${v.map(x => `<span class="vb${x === "重映" ? " re" : ""}">${x}</span>`).join("")}</span>` : ""; };
 const people = s => (s || "").split(/[,，]/).map(x => x.trim()).filter(Boolean).join(" / ");
 
 function starIds(){
   if (S.watch) return new Set(S.watch.stars.map(x => String(x.id)));
   return new Set(S.local);
 }
-const isFav = m => starIds().has(String(m.id));
+/* 星标 = 手动星标的 + 命中"关注的系列 / 影人"的（手动取消过的除外） */
+const plain = s => String(s || "").replace(/[\s·•・.\-－—_]/g, "").toLowerCase();
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const follows = () => (gh.token() && S.watch && S.watch.follow) || [];
+function followHits(m, rules = follows()){
+  const P = (S.data && S.data.follow_presets) || {}, out = [], nm = m.nm || "", enm = m.enm || "";
+  const ppl = `${m.dir || ""},${m.star || ""}`.split(/[,，/]/).map(plain).filter(Boolean);
+  for (const r0 of rules) {
+    const r = String(r0).trim(); if (!r) continue;
+    const p = P[r];
+    if (p) {
+      if (p.zh.some(w => nm.includes(w)) || p.en.some(w => new RegExp(`(^|[^A-Za-z])${reEsc(w)}([^A-Za-z]|$)`, "i").test(enm))) out.push(r);
+      continue;
+    }
+    const k = plain(r);
+    if (k.length >= 2 && (plain(nm).includes(k) || plain(enm).includes(k) || ppl.some(x => x.includes(k)))) out.push(r);
+  }
+  return out;
+}
+const favMemo = new Map();
+const favReset = () => favMemo.clear();
+/* "star" = 手动星标；系列或影人名 = 因为关注而星标；"" = 没有 */
+function favWhy(m){
+  const id = String(m.id);
+  if (favMemo.has(id)) return favMemo.get(id);
+  let w = "";
+  if (starIds().has(id)) w = "star";
+  else if (!(S.watch && (S.watch.mute || []).map(String).includes(id))) w = followHits(m)[0] || "";
+  favMemo.set(id, w); return w;
+}
+const isFav = m => !!favWhy(m);
+const favById = mid => { const m = movieOf(mid); return m ? isFav(m) : starIds().has(String(mid)); };
+
+/* 观影计划：连了 GitHub 存在私有仓库 watch.json（后台据此提醒），没连就存在这台手机上 */
+const plans = () => (gh.token() ? (S.watch && S.watch.plans) || [] : getPref("plans", [])).filter(p => p && p.id && p.date);
+const planStart = p => new Date(`${p.date}T${p.time || "23:59"}:00+08:00`);
+const planEnd = p => new Date(planStart(p).getTime() + ((p.dur || (movieOf(p.mid) || {}).dur || 120) + 10) * 6e4);
+const planOf = mid => plans().filter(p => String(p.mid) === String(mid)).sort((a, b) => planStart(a) - planStart(b));
+async function savePlans(mut, msg){
+  if (!gh.token()) { const l = getPref("plans", []); mut(l); setPref("plans", l); return; }
+  await writeWatch(d => { d.plans = Array.isArray(d.plans) ? d.plans : []; mut(d.plans); }, msg);
+  dispatchRun();
+}
 const buyURL = (cid, mid) => `https://m.maoyan.com/mtrade/cinema/cinema?cinemaId=${cid}&ci=${S.data.ci || 42}&movieId=${mid}`;
 const openedAt = m => m.unreleased ? S.data.cinemas.map(c => [c, (m.opened || {})[String(c.id)]]).filter(x => x[1]) : [];
 
@@ -839,32 +1055,47 @@ async function load(){
   if (window.__RADAR__) { apply(window.__RADAR__); return; }
   const t = Date.now();
   const get = f => fetch(`data/${f}?t=${t}`, {cache:"no-store"}).then(r => r.ok ? r.json() : null).catch(() => null);
-  let [movies, hist, events, status] = await Promise.all(["movies.json","history.json","events.json","status.json"].map(get));
+  let [movies, hist, events, status] = await Promise.all(["movies.json","history.json","events.json","status.json"].map(get)), viaBranch = false;
   // 网页上的数据超过 20 分钟没变（GitHub 网页没换上新部署，或者手机连不上 github.io 只拿到了缓存），直接去数据分支取最新的
   if (!status || t - new Date(status.updated) > 12e5) {
     const fresh = await fromBranch(status);
-    if (fresh) ({movies, hist, events, status} = fresh);
+    if (fresh) { ({movies, hist, events, status} = fresh); viaBranch = true; }
   }
   if (!movies) { $("#sub").textContent = "还没有数据"; $("#main").innerHTML =
     `<p class="empty">数据还没生成。到 GitHub 仓库的 Actions 里运行一次"更新电影数据"，几分钟后再刷新。</p>`; return; }
-  apply({movies, hist, events, status});
+  apply({movies, hist, events, status, viaBranch});
 }
 /* 后台每轮都会把数据存到网站仓库的 radar-data 分支，通过 GitHub 接口读，不经过网页部署 */
-async function fromBranch(old){
+async function branchGet(f, tok = gh.token()){
   const repo = gh.repo(); if (!repo) return null;
-  const get = async (f, tok = gh.token()) => {
-    const r = await fetch(`https://api.github.com/repos/${repo}/contents/data/${f}?ref=radar-data`, {cache: "no-store",
-      headers: {Accept: "application/vnd.github.raw+json", ...(tok ? {Authorization: `Bearer ${tok}`} : {})}}).catch(() => null);
-    if (r && r.ok) return r.json().catch(() => null);
-    return tok && r && (r.status === 401 || r.status === 403 || r.status === 404) ? get(f, "") : null;   // 密钥不管用就匿名再试
-  };
-  const st = await get("status.json");
+  const r = await fetch(`https://api.github.com/repos/${repo}/contents/data/${f}?ref=radar-data`, {cache: "no-store",
+    headers: {Accept: "application/vnd.github.raw+json", ...(tok ? {Authorization: `Bearer ${tok}`} : {})}}).catch(() => null);
+  if (r && r.ok) return r.json().catch(() => null);
+  return tok && r && (r.status === 401 || r.status === 403 || r.status === 404) ? branchGet(f, "") : null;   // 密钥不管用就匿名再试
+}
+async function fromBranch(old){
+  const st = await branchGet("status.json");
   if (!st || (old && new Date(st.updated) <= new Date(old.updated))) return null;
-  const [movies, hist, events] = await Promise.all(["movies.json", "history.json", "events.json"].map(f => get(f)));
+  const [movies, hist, events] = await Promise.all(["movies.json", "history.json", "events.json"].map(f => branchGet(f)));
   return movies ? {movies, hist, events, status: st} : null;
 }
+/* 剧情简介、预告片地址：打开详情页时才读（列表页更轻） */
+let detP = null;
+function ensureDetails(){
+  if (S.det) return Promise.resolve(S.det);
+  if (!detP) detP = (async () => {
+    let d = S.viaBranch ? null : await fetch(`data/details.json?t=${encodeURIComponent(S.statusAt || "")}`).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (!d) d = await branchGet("details.json");
+    S.det = d || {}; return S.det;
+  })().catch(() => (S.det = {}));
+  return detP;
+}
+/* 兼容老数据：以前剧情和预告片直接放在 movies.json 里 */
+const detOf = m => ({dra: (S.det && S.det[m.id] && S.det[m.id].dra) || (typeof m.dra === "string" ? m.dra : ""),
+  video: (S.det && S.det[m.id] && S.det[m.id].video) || (typeof m.video === "string" ? m.video : "")});
 function apply(d){
   S.data = d.movies; S.hist = d.hist || {}; S.events = d.events || []; S.status = (d.status && d.status.sources) || {};
+  S.viaBranch = !!d.viaBranch; S.det = null; detP = null; favReset();
   S.statusAt = (d.status && d.status.updated) || d.movies.updated;
   updateBadge();
   render();
@@ -876,8 +1107,8 @@ function apply(d){
 }
 /* 动态的未读数：只算开票、开分、异常，以及星标电影的动态（新片定档不算） */
 function updateBadge(){
-  const seen = getPref("feedSeen", ""), stars = starIds();
-  const unread = S.events.filter(e => e.at > seen && (["ticketing", "score", "health"].includes(e.type) || (e.mid && stars.has(String(e.mid))))).length;
+  const seen = getPref("feedSeen", "");
+  const unread = S.events.filter(e => e.at > seen && (["ticketing", "score", "health"].includes(e.type) || (e.mid && favById(e.mid)))).length;
   const b = $("#feedBadge"); b.hidden = !unread || S.tab === "feed"; b.textContent = unread > 9 ? "9+" : unread;
 }
 
@@ -885,11 +1116,12 @@ function updateBadge(){
 function miniRates(m){ return ["db","im","tm"].map(k => { const v = val(k, m); return v ? `<span class="${k}">${IC[k]}${v}</span>` : ""; }).join(""); }
 /* lines：海报下面的小字，[[class, html], …]；默认未上映的显示想看人数 */
 function card(m, opt = {}){
-  const o = openedAt(m), V = versions(m).slice(0, 2), tkH = o.length ? tkMini(o) : "";
+  const o = openedAt(m), V = versions(m).slice(0, m.re ? 1 : 2), tkH = o.length ? tkMini(o) : "";
+  if (m.re) V.unshift("重映");
   const lines = opt.lines || (m.unreleased && m.wish.maoyan ? [["s", `${wan(m.wish.maoyan)} 人想看`]] : []);
   return `<button class="card${opt.cls ? " " + opt.cls : ""}" data-id="${m.id}">
     <div class="pw"><img loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
-      ${V.length ? `<span class="vbw">${V.map(x => `<span class="vb">${x}</span>`).join("")}</span>` : ""}
+      ${V.length ? `<span class="vbw">${V.map(x => `<span class="vb${x === "重映" ? " re" : ""}">${x}</span>`).join("")}</span>` : ""}
       ${isFav(m) ? `<span class="star">${IC.star}</span>` : ""}
       ${opt.overlay ? `<div class="prate">${tkH}${miniRates(m)}</div>` : tkH}</div>
     <div class="t">${esc(m.nm)}</div>
@@ -915,31 +1147,34 @@ function heroBlock(m){
   const n = daysTo(m.rt), o = openedAt(m), exact = m.rt && m.rt.length === 10;
   const cd = !exact ? `<div class="hero-cd word"><b>${m.rt ? esc(m.rt.length === 7 ? monthY(m.rt) : m.rt + "年") : "待定"}</b><span>${m.rt ? "上映" : "上映日期"}</span></div>
       <div class="hero-date">具体日期还没定</div>`
-    : `${n <= 1 ? `<div class="hero-cd word"><b>${n === 0 ? "今天" : "明天"}</b><span>上映</span></div>` : `<div class="hero-cd"><b>${n}</b><span>天后上映</span></div>`}
+    : `${n <= 1 ? `<div class="hero-cd word"><b>${n <= 0 ? "今天" : "明天"}</b><span>上映</span></div>` : `<div class="hero-cd"><b>${n}</b><span>天后上映</span></div>`}
       <div class="hero-date">${mdcY(m.rt)} ${wk(m.rt)}</div>`;
-  const cs = S.data.cinemas;
-  const tks = !o.length ? `<span class="tk ghost">${cs.length > 1 ? `${cs.length} 家影院都还没开票` : "还没开票"}</span>`
-    : cs.map(c => { const x = (m.opened || {})[String(c.id)]; return x ? tk(c, x) : `<span class="tk ghost">${esc(tiny(c))} 未开票</span>`; }).join("");
-  return `<section class="hero"><div class="hero-bg" style="background-image:url('${esc(m.img)}')"></div>
+  const cs = S.data.cinemas, pl = planOf(m.id)[0], why = favWhy(m);
+  const tks = (pl ? `<span class="tk mine">已买票 <b>${md(pl.date)}${pl.time ? " " + esc(pl.time) : ""}</b></span>` : "") + (!o.length ? `<span class="tk ghost">${cs.length > 1 ? `${cs.length} 家影院都还没开票` : "还没开票"}</span>`
+    : cs.map(c => { const x = (m.opened || {})[String(c.id)]; return x ? tk(c, x) : `<span class="tk ghost">${esc(tiny(c))} 未开票</span>`; }).join(""));
+  const tint = (getPref("tints", {})[m.id] || "");
+  return `<section class="hero" data-tint="${m.id}" ${tint ? `style="--ht:${esc(tint)}"` : ""}><div class="hero-bg" style="background-image:url('${esc(m.img)}')"></div>
     <button class="hero-in" data-id="${m.id}">
       <img class="hero-poster" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer">
-      <div style="min-width:0"><div class="hero-why">${IC.star}星标${vbs(m, 2)}</div><h2>${esc(m.nm)}</h2>${m.enm ? `<div class="en">${esc(m.enm)}</div>` : ""}
+      <div style="min-width:0"><div class="hero-why">${IC.star}${why === "star" ? "星标" : "关注 " + esc(why)}${vbs(m, 2)}</div><h2>${esc(m.nm)}</h2>${m.enm ? `<div class="en">${esc(m.enm)}</div>` : ""}
         ${cd}<div class="tks">${tks}</div></div>
     </button></section>`;
 }
 
 /* ---------- 页面 ---------- */
-const TITLES = {coming: "即将上映", opened: "已开票", now: "正在热映", wallet: "票夹", feed: "动态"};
+const TITLES = {coming: "即将上映", now: "正在热映", wallet: "票夹", feed: "动态"};
 function comingView(){
   const all = S.data.movies.filter(m => m.unreleased);
   if (S.q) { const hits = all.filter(match).sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)));
     return hits.length ? `<div class="rows" style="margin-top:6px">${hits.map(row).join("")}</div>` : `<p class="empty">没有找到"${esc(S.q)}"。</p>`; }
   const favs = all.filter(isFav).sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)));
+  const top = new Set(favs.map(m => m.id));
   let h = favs.length
     ? `<div class="heroes" id="heroes">${favs.map(heroBlock).join("")}</div>` + (favs.length > 1 ? `<div class="hero-dots" id="dots">${favs.map((_, i) => `<i${i ? "" : ` class="on"`}></i>`).join("")}</div>` : "")
     : `<div class="hero-empty"><span class="ic">${IC.star}</span><div><b>星标你想看的电影</b><span>点开任意一部，点右上角"星标"。它会出现在这里，开票和开分都会推送给你。</span></div></div>`;
-  // 想看飙升：较昨天涨得最多的
-  const rising = all.filter(m => (m.delta.maoyan || 0) > 0).sort((a,b) => b.delta.maoyan - a.delta.maoyan).slice(0, 10);
+  h += openedShelf();
+  // 想看飙升：较昨天涨得最多的（顶部已经有的不再重复）
+  const rising = all.filter(m => !top.has(m.id) && (m.delta.maoyan || 0) > 0).sort((a,b) => b.delta.maoyan - a.delta.maoyan).slice(0, 10);
   if (rising.length >= 4) h += `<div class="day"><span class="d">想看飙升</span><span class="w">较昨天</span></div>
     <div class="hscroll">${rising.map(m => card(m, {lines: [["s up", "↑ " + wan(m.delta.maoyan)], ["s", m.rt && m.rt.length === 10 ? `${md(m.rt)} 上映` : monthY(m.rt) || "日期待定"]]})).join("")}</div>`;
   // 本周、下周、再下周：一周一排，同一天的挨在一起
@@ -947,46 +1182,50 @@ function comingView(){
   const isNear = m => m.rt && m.rt.length === 10 && m.rt <= wkEnd;
   const weeks = {};
   all.filter(isNear).forEach(m => (weeks[mondayOf(m.rt)] = weeks[mondayOf(m.rt)] || []).push(m));
+  const wish = m => m.wish.maoyan || 0;
   Object.keys(weeks).sort().forEach(mon => {
-    const ms = weeks[mon].sort((a,b) => a.rt.localeCompare(b.rt) || (isFav(b) - isFav(a)) || (openedAt(b).length - openedAt(a).length) || b.wish.maoyan - a.wish.maoyan);
-    const i = Math.round((Date.parse(mon) - Date.parse(mon0)) / 6048e5);
+    const ms = weeks[mon].sort((a,b) => a.rt.localeCompare(b.rt) || (isFav(b) - isFav(a)) || (openedAt(b).length - openedAt(a).length) || wish(b) - wish(a));
+    const i = Math.max(0, Math.round((Date.parse(mon) - Date.parse(mon0)) / 6048e5));
     h += `<div class="day"><span class="d">${["本周", "下周", "再下周"][i] || md(mon) + " 那周"}</span><span class="w">${md(i === 0 ? today : mon)} – ${md(addDays(mon, 6))}</span><span class="note">${ms.length} 部</span></div>
       <div class="hscroll">${ms.map((m, k) => card(m, {cls: k && ms[k - 1].rt !== m.rt ? "nd" : "",
-        lines: [["s dt", dayLabel(m.rt)], ["s", m.wish.maoyan ? `${wan(m.wish.maoyan)} 想看` : ""]]})).join("")}</div>`;
+        lines: [["s dt", dayLabel(m.rt)], ["s", wish(m) ? `${wan(wish(m))} 想看` : ""]]})).join("")}</div>`;
   });
-  // 更远的：按月，紧凑行
-  const later = all.filter(m => !isNear(m))
-    .sort((a,b) => rtKey(a.rt).localeCompare(rtKey(b.rt)) || b.wish.maoyan - a.wish.maoyan);
-  let cur = "", shown = 0, buf = "";
-  const flush = () => { if (buf) h += `<div class="rows">${buf}</div>`; buf = ""; };
-  for (const m of later) {
-    if (shown >= S.limit) break;
-    const k = m.rt && m.rt.length >= 7 ? m.rt.slice(0,7) : "tbd";
-    if (k !== cur) { flush(); cur = k; const y = +k.slice(0,4), thisY = todayYmd()[0];
-      h += `<div class="sec"><h3>${k === "tbd" ? "日期待定" : (y !== thisY ? y + "年" : "") + +k.slice(5,7) + "月"}</h3><span class="note">${later.filter(x => (x.rt && x.rt.length >= 7 ? x.rt.slice(0,7) : "tbd") === k).length} 部</span></div>`; }
-    buf += row(m); shown++;
+  // 更远的：一个月一排海报，和上面一样可以横着滑
+  const later = all.filter(m => !isNear(m)), months = {}, tbd = [];
+  later.forEach(m => m.rt && m.rt.length >= 7 ? (months[m.rt.slice(0, 7)] = months[m.rt.slice(0, 7)] || []).push(m) : tbd.push(m));
+  Object.keys(months).sort().forEach(k => {
+    const ms = months[k].sort((a, b) => rtKey(a.rt).localeCompare(rtKey(b.rt)) || wish(b) - wish(a));
+    h += `<div class="day"><span class="d">${monthY(k)}</span><span class="note">${ms.length} 部</span></div>
+      <div class="hscroll">${ms.map((m, j) => card(m, {cls: j && ms[j - 1].rt !== m.rt ? "nd" : "",
+        lines: [["s dt", m.rt.length === 10 ? `${md(m.rt)} ${wk(m.rt)}` : "日期未定"], ["s", wish(m) ? `${wan(wish(m))} 想看` : ""]]})).join("")}</div>`;
+  });
+  // 日期待定：按想看人数，先放一排；要看全部再展开成列表
+  if (tbd.length) {
+    tbd.sort((a, b) => wish(b) - wish(a));
+    const N = 14;
+    h += `<div class="day"><span class="d">日期待定</span><span class="w">按想看人数</span><span class="note">${tbd.length} 部</span></div>
+      <div class="hscroll">${tbd.slice(0, N).map(m => card(m, {lines: [["s", m.rt ? (m.rt.length === 4 ? m.rt + " 年" : monthY(m.rt)) : "待定"], ["s", wish(m) ? `${wan(wish(m))} 想看` : ""]]})).join("")}
+        ${tbd.length > N && !S.tbdAll ? `<button class="more-card" id="tbdAll"><b>${tbd.length}</b>查看全部</button>` : ""}</div>`;
+    if (S.tbdAll && tbd.length > N) h += `<div class="rows" style="margin-top:4px">${tbd.slice(N).map(row).join("")}</div>`;
   }
-  flush();
-  if (later.length > S.limit) h += `<button class="more" id="more">显示更多</button>`;
   return h;
 }
-/* 已开票：按电影列，一部片在几家影院开票就挂几张小票 */
-function openedView(){
-  const cs = S.data.cinemas;
-  const list = S.data.movies.filter(m => m.unreleased && openedAt(m).length && match(m)).map(m => {
+/* 已开票：并进待映页，一排海报，按最近开票排 */
+function openedList(){
+  return S.data.movies.filter(m => m.unreleased && openedAt(m).length && match(m)).map(m => {
     const o = openedAt(m);
     return {m, o, last: o.map(x => x[1].at || "").sort().pop(), first: o.map(x => x[1].first).sort()[0]};
   }).sort((a, b) => b.last.localeCompare(a.last) || a.first.localeCompare(b.first) || rtKey(a.m.rt).localeCompare(rtKey(b.m.rt)));
-  const chk = `<div class="chk">${cs.map(c => { const s = S.status["cinema:" + c.id], bad = s && !s.ok;
+}
+function cinemaCheck(cls = ""){
+  return `<div class="chk ${cls}">${S.data.cinemas.map(c => { const s = S.status["cinema:" + c.id], bad = s && !s.ok;
     return `<span><span class="dot${bad ? " bad" : ""}"></span>${esc(c.short)} ${bad ? "检查失败，正在重试" : c.at ? ago(c.at) + "检查" : ""}</span>`; }).join("")}</div>`;
-  if (!list.length) return chk + `<p class="empty">${S.q ? `没有找到"${esc(S.q)}"。` : `还没有新片在你的影院开票。开票后会出现在这里${S.watch && S.watch.ticketing === "starred" ? "" : "并推送给你"}。`}</p>`;
-  return chk + `<section class="cine" style="margin-top:12px">${list.map(({m, o, last, first}) => {
-    const s = [last ? hm(last) + " 开票" : "", m.rt && m.rt.length === 10 && m.rt !== first ? `${mdcY(m.rt)}上映` : ""].filter(Boolean).join("，");
-    return `<button class="otk" data-id="${m.id}"><img loading="lazy" src="${esc(m.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
-      <div style="min-width:0"><div class="t">${esc(m.nm)}${isFav(m) ? ` <span style="color:var(--gold)">★</span>` : ""}</div>
-        ${s ? `<div class="s">${esc(s)}</div>` : ""}
-        <div class="tks">${cs.map(c => { const x = (m.opened || {})[String(c.id)]; return x ? tk(c, x) : ""; }).join("")}</div></div>
-      <div class="first"><b>${md(first)}</b><small>${wk(first)}首场</small></div></button>`; }).join("")}</section>`;
+}
+function openedShelf(){
+  const list = openedList();
+  const head = `<div class="day"><span class="d">已开票</span><span class="w">你的影院</span>${list.length ? `<span class="note">${list.length} 部</span>` : ""}</div>`;
+  if (!list.length) return head + cinemaCheck("inline") + `<p class="quiet">还没有新片在你的影院开票，开了会第一时间${S.watch && S.watch.ticketing === "starred" ? "出现在这里" : "推送给你"}。</p>`;
+  return head + cinemaCheck("inline") + `<div class="hscroll">${list.map(({m, last, first}) => card(m, {lines: [["s dt", `首场 ${dayLabel(first)}`], ["s", last ? hm(last) + " 开票" : ""]]})).join("")}</div>`;
 }
 S.nsort = getPref("nsort", "hot");
 function nowView(){
@@ -1012,7 +1251,7 @@ function feedView(){
   const t0 = todayStr(), groups = [];
   for (const e of S.events) { const d = dayOf(e.at); if (!groups.length || groups[groups.length - 1][0] !== d) groups.push([d, []]); groups[groups.length - 1][1].push(e); }
   return groups.map(([d, evs]) => `<div class="feed-day"><b>${d === t0 ? "今天" : d === addDays(t0, -1) ? "昨天" : mdcY(d)}</b><span>${wk(d)}</span></div><div class="feed">` + evs.map(e => {
-    const st = e.star || (e.mid && stars.has(String(e.mid))), mv = e.mid && movieOf(e.mid);
+    const mv = e.mid && movieOf(e.mid), st = e.star || (mv ? isFav(mv) : e.mid && stars.has(String(e.mid)));
     const body = e.body.replace(/^⭐ /, ""), nm = mv ? mv.nm : ((/《(.+?)》/.exec(body) || [])[1] || "");
     let tt = nm || e.title.replace(/^\S+\s/, ""), bd = nm ? body.replace(`《${nm}》`, "").trim() : body;
     bd = bd.replace(/(\d{4}-\d{2}-\d{2})/g, s => mdcY(s));
@@ -1052,8 +1291,10 @@ function render(){
   $("#sub").textContent = `${S.data.city || ""}  ${navigator.onLine === false ? "离线，显示的是" : ""}${ago(S.data.updated)}更新${navigator.onLine === false ? "的数据" : ""}`;
   const searching = S.q && !["feed", "wallet"].includes(S.tab);
   $("#searchBtn").style.visibility = ["feed", "wallet"].includes(S.tab) ? "hidden" : "";
-  $("#main").innerHTML = (searching ? searchView() : ({coming: comingView, now: nowView, opened: openedView, wallet: walletView, feed: feedView})[S.tab]()) + (S.tab === "wallet" ? "" : foot());
+  $("#main").innerHTML = (searching ? searchView() : ({coming: comingView, now: nowView, wallet: walletView, feed: feedView}[S.tab] || comingView)()) + (S.tab === "wallet" ? "" : foot());
   const more = $("#more"); if (more) more.onclick = () => { S.limit += 60; render(); };
+  const ta = $("#tbdAll"); if (ta) ta.onclick = ev => { ev.stopPropagation(); S.tbdAll = true; render(); };
+  doomCountdown(); paintHeroTints();
   const ns = $("#nsort"); if (ns) ns.onclick = e => { const b = e.target.closest("[data-s]"); if (b) { S.nsort = b.dataset.s; setPref("nsort", S.nsort); render(); } };
   const fb = $("#footBtn"); if (fb) fb.onclick = () => { S.footOpen = !fb.parentElement.classList.contains("open"); fb.parentElement.classList.toggle("open", S.footOpen); };
   const hs = $("#heroes"), dots = $("#dots");
@@ -1070,24 +1311,59 @@ function wishSpark(id){
   const pts = vals.map((v,i) => `${(i * W / (h.length - 1)).toFixed(1)},${(H - 4 - (v - mn) / sp * (H - 10)).toFixed(1)}`);
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="#ffb43b" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(" ")}"/></svg>`;
 }
+IC.play = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>`;
+IC.cal = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4M12 13v4M10 15h4"/></svg>`;
+const PREMIUM = /imax|杜比|dolby|cinity|激光|巨幕|4dx|screenx|中国巨幕/i;
+/* 场次表：开票后，每家影院最近几天的场次，IMAX / 杜比 / 激光厅高亮 */
+function showsHTML(m, c, o){
+  const days = (o.shows || []).filter(d => d.s && d.s.length);
+  if (!days.length) return "";
+  const key = `${m.id}-${c.id}`, sel = Math.min(S.showDay[key] || 0, days.length - 1);
+  return `<div class="dchips" data-sk="${key}">${days.map((d, i) => `<button data-di="${i}" aria-pressed="${i === sel}">${dayLabel(d.d).replace(/<\/?em>/g, "")}</button>`).join("")}</div>
+    ${days.map((d, i) => `<div class="shows" data-sk="${key}" data-di="${i}" ${i === sel ? "" : "hidden"}>${d.s.map(x => {
+      const hall = (x.h || "").replace(/（.*?）|\(.*?\)/g, "");
+      return `<button class="show${PREMIUM.test(x.h + " " + x.v) ? " pm" : ""}" data-show='${esc(JSON.stringify({c: c.id, d: d.d, t: x.t, h: hall, v: x.v, p: x.p || ""}))}'>
+        <b>${esc(x.t)}</b><span>${esc(hall || x.v)}</span><small>${esc([x.v && x.v !== hall ? x.v : "", x.p ? "¥" + x.p : ""].filter(Boolean).join(" "))}</small></button>`; }).join("")}</div>`).join("")}`;
+}
+S.showDay = {};
+function cinemaBox(m){
+  const pl = planOf(m.id);
+  if (!m.unreleased && !pl.length) return "";
+  const rows = !m.unreleased ? "" : S.data.cinemas.map(c => { const o = (m.opened || {})[String(c.id)];
+    return o ? `<div class="cb-row open"><span class="n">${esc(c.short)}</span><span class="i">${o.at ? hm(o.at) + " 开票" : "已开票"}，首场 ${md(o.first)}</span></div>${showsHTML(m, c, o)}`
+             : `<div class="cb-row wait"><span class="n">${esc(c.short)}</span><span class="i">还没开票${isFav(m) ? "，开了马上推送" : ""}</span></div>`; }).join("");
+  return `<div class="cbox">${pl.map(p => `<button class="myplan" data-plan-edit="${esc(p.id)}">${IC.cal}<div><b>已买票：${mdc(p.date)} ${esc(p.time || "")}</b><span>${esc([p.cinema, p.seat].filter(Boolean).join("  ") || "点这里补上影院和座位")}</span></div></button>`).join("")}${rows}</div>`;
+}
+function dockHTML(m){
+  const o = openedAt(m);
+  let btns = o.map(([c]) => `<a class="btn" href="${esc(buyURL(c.id, m.id))}" target="_blank" rel="noopener">${esc(tiny(c))} 选座</a>`).join("");
+  if (!btns && m.status === "now" && !m.unreleased) btns = `<a class="btn" href="${esc((m.links || {}).maoyan)}" target="_blank" rel="noopener">猫眼购票</a>`;
+  if (!btns) return "";
+  return `<div class="dock"><button class="btn ghost" data-plan="${m.id}" aria-label="记进观影计划">${IC.cal}</button>${btns}</div>`;
+}
 function openMovie(id, push = true, keep = false){
   const m = S.data.movies.find(x => String(x.id) === String(id)); if (!m) return;
+  if (S.open !== String(m.id)) S.playing = false;
   S.open = String(m.id);
-  const fav = isFav(m), d = m.douban, i = m.imdb, t = m.tomato, L = m.links || {};
+  const why = favWhy(m), fav = !!why, d = m.douban, i = m.imdb, t = m.tomato, L = m.links || {}, det = detOf(m);
+  if (!S.det) ensureDetails().then(() => { if (S.open === String(m.id) && $("#sheet").classList.contains("on") && !S.playing) refreshMovie(); });
   const n = daysTo(m.rt);
-  const when = m.unreleased ? (m.rt && m.rt.length === 10 ? (n === 0 ? "今天上映" : `${mdcY(m.rt)}上映，还有 ${n} 天`) : m.rt ? `${m.rt.length === 7 ? monthY(m.rt) : m.rt + "年"}上映，日期待定` : "上映日期待定") : (m.rt ? m.rt.slice(0,4) : "");
+  const when = m.unreleased ? (m.rt && m.rt.length === 10 ? (n <= 0 ? `今天${m.re ? "重映" : "上映"}` : `${mdcY(m.rt)}${m.rtm && m.rtm !== "00:00" ? " " + m.rtm : ""}${m.re ? "重映" : "上映"}，还有 ${n} 天`) : m.rt ? `${m.rt.length === 7 ? monthY(m.rt) : m.rt + "年"}上映，日期待定` : "上映日期待定") : (m.rt ? m.rt.slice(0,4) : "");
   const meta2 = [m.cat && m.cat.replace(/,/g, " / "), m.dur && m.dur + " 分钟"].filter(Boolean).join("，");
-  const cell = (k, lg, v, note, url) => `<a href="${esc(url || "#")}" target="_blank" rel="noopener"><div class="lg">${lg}</div>${v ? `<b>${v}</b>` : `<b class="no">暂无</b>`}<small>${esc(note)}</small></a>`;
-  const dl = [["导演", people(m.dir)], ["主演", people(m.star)], ["地区", people(m.src)], ["时长", m.dur && m.dur + " 分钟"]].filter(x => x[1]);
+  const cell = (k, lg, v, note, url) => `<${url ? `a href="${esc(url)}" target="_blank" rel="noopener"` : "div"}><div class="lg">${lg}</div>${v ? `<b>${v}</b>` : `<b class="no">暂无</b>`}<small>${esc(note)}</small></${url ? "a" : "div"}>`;
+  const fl = follows().map(plain), names = s => (s || "").split(/[,，]/).map(x => x.trim()).filter(Boolean);
+  const pp = s => `<span class="pps">${names(s).map(x => `<button class="pp${fl.includes(plain(x)) ? " on" : ""}" data-person="${esc(x)}">${esc(x)}</button>`).join("")}</span>`;
+  const dl = [["导演", m.dir && pp(m.dir)], ["主演", m.star && pp(m.star)], ["地区", esc(people(m.src))], ["时长", m.dur && m.dur + " 分钟"]].filter(x => x[1]);
   const anyScore = ["db", "im", "tm"].some(k => val(k, m));
+  const favLabel = why === "star" ? "已星标" : why ? esc(why) : "星标";
   $("#sheet").innerHTML = `
-    <div class="sbar"><button id="close">${IC.back}返回</button><div class="st">${esc(m.nm)}</div><button class="fav" id="fav" aria-pressed="${fav}">${IC.star}${fav ? "已星标" : "星标"}</button></div>
+    <div class="sbar"><button id="close">${IC.back}返回</button><div class="st">${esc(m.nm)}</div><button class="fav" id="fav" aria-pressed="${fav}">${IC.star}${favLabel}</button></div>
     <div class="cover"><div class="cover-bg" style="background-image:url('${esc(m.img)}')"></div>
-      <div class="cover-poster" style="background-image:url('${esc(m.img)}')"><img src="${esc(big(m.img, 480))}" alt="" referrerpolicy="no-referrer" onload="this.classList.add('ok')" onerror="this.remove()"></div>
+      <div class="cover-poster" id="cposter" style="background-image:url('${esc(m.img)}')"><img src="${esc(big(m.img, 480))}" alt="" referrerpolicy="no-referrer" onload="this.classList.add('ok')" onerror="this.remove()">
+        ${m.video ? `<button class="play" id="play" aria-label="播放预告片">${IC.play}</button>` : ""}</div>
       <div class="cover-t"><h1>${esc(m.nm)}</h1>${m.enm ? `<div class="en">${esc(m.enm)}</div>` : ""}</div></div>
-    <div class="dmeta">${m.unreleased && n != null && n >= 0 ? `<span class="cd">${esc(when)}</span>` : esc(when)}${meta2 ? `<br>${esc(meta2)}` : ""}${versions(m).length ? `<br>${vbs(m, 5)}` : ""}</div>
-    ${m.unreleased ? `<div class="dtks">${S.data.cinemas.map(c => { const o = (m.opened || {})[String(c.id)];
-        return o ? `<span class="tk big">${esc(c.short)} 首场 <b>${md(o.first)}</b></span>` : `<span class="tk big ghost">${esc(c.short)} 未开票</span>`; }).join("")}</div>` : ""}
+    <div class="dmeta">${m.unreleased && n != null && n >= 0 ? `<span class="cd">${esc(when)}</span>` : esc(when)}${meta2 ? `<br>${esc(meta2)}` : ""}${versions(m).length || m.re ? `<br>${vbs(m, 5)}` : ""}</div>
+    ${cinemaBox(m)}
     ${watchCTA(m)}
     ${m.unreleased && !anyScore ? `<div class="noscore"><span class="lgs">${IC.db}${IC.im}${IC.tm}</span><span>还没开分。${fav ? "豆瓣、IMDb、烂番茄一开分就推送给你" : "星标后，一开分就推送给你"}</span></div>` : `
     <div class="scores3">
@@ -1096,31 +1372,114 @@ function openMovie(id, push = true, keep = false){
       ${cell("tm", IC.tm + `<span style="margin-left:5px;font-size:11px;color:var(--dim)">烂番茄</span>`, val("tm", m), t ? (t.critics != null ? (t.audience != null ? `观众 ${t.audience}%` : "专业评分") : "还没开分") : "未收录", t && t.url)}
     </div>`}
     ${m.wish.maoyan ? `<div class="wishbox"><div><div class="big">${wanH(m.wish.maoyan)}</div><div class="lab">人在猫眼想看${m.delta.maoyan ? `，今天 <span class="d">${signed(m.delta.maoyan)}</span>` : ""}${m.wish.tpp != null ? `<br>淘票票 ${wan(m.wish.tpp)} 人` : ""}</div></div>${wishSpark(String(m.id))}</div>` : ""}
-    ${m.unreleased ? `<div class="blk"><h4>你的影院</h4><div class="cines">${S.data.cinemas.map(c => { const o = (m.opened || {})[String(c.id)];
-        const i = `<span class="i">${o ? `${o.at ? hm(o.at) + " 开票" : "已开票"}<br>首场 ${mdc(o.first)}` : "还没开票"}</span>`;
-        return o ? `<a class="cl open" href="${esc(buyURL(c.id, m.id))}" target="_blank" rel="noopener"><span class="n">${esc(c.short)}</span><span class="r">${i}<span class="go">选座 ›</span></span></a>`
-                 : `<div class="cl"><span class="n">${esc(c.short)}</span>${i}</div>`; }).join("")}</div></div>` : ""}
-    ${m.dra ? `<div class="blk"><h4>剧情</h4><p class="dra">${esc(m.dra)}</p></div>` : ""}
-    ${dl.length ? `<div class="blk"><h4>信息</h4><dl class="dl">${dl.map(([k,v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>` : ""}
-    <div class="blk"><h4>去看看</h4><div class="links">
-      <a href="${esc(L.maoyan)}" target="_blank" rel="noopener">猫眼购票</a>
+    ${det.dra ? `<div class="blk"><h4>剧情</h4><p class="dra">${esc(det.dra)}</p></div>` : !S.det ? `<div class="blk"><h4>剧情</h4><p class="dra" style="color:var(--faint)">读取中…</p></div>` : ""}
+    ${dl.length ? `<div class="blk"><h4>信息${gh.token() ? `<span style="font-weight:400;margin-left:8px">点名字可以关注</span>` : ""}</h4><dl class="dl">${dl.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>` : ""}
+    <div class="blk"><h4>去看看</h4><div class="minilinks">
+      <a href="${esc(L.maoyan)}" target="_blank" rel="noopener">猫眼</a>
       ${L.tpp ? `<a href="${esc(L.tpp)}" target="_blank" rel="noopener">淘票票</a>` : ""}
       ${d ? `<a href="${esc(d.url)}" target="_blank" rel="noopener">豆瓣</a>` : ""}
       ${i ? `<a href="${esc(i.url)}" target="_blank" rel="noopener">IMDb</a>` : ""}
       ${t ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">烂番茄</a>` : ""}
-      ${m.video ? `<a href="${esc(m.video)}" target="_blank" rel="noopener">预告片</a>` : ""}
     </div></div>
-    <p class="tip">${fav ? "已星标：" : "星标后，"}这部片在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送给你。</p>`;
+    ${dockHTML(m)}
+    <p class="tip">${why && why !== "star" ? `因为你关注了"${esc(why)}"，自动星标。` : ""}${fav ? "这部片在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送给你。" : "星标后，这部片在你的影院开票、在豆瓣 / IMDb / 烂番茄开分，都会推送给你。"}</p>`;
   const sh = $("#sheet"); if (!keep) sh.scrollTop = 0; sh.classList.add("on"); document.body.style.overflow = "hidden";
   sh.querySelector(".sbar").classList.toggle("solid", sh.scrollTop > 250);
   if (push) history.pushState({m: m.id}, "", "#m" + m.id);
   $("#close").onclick = () => history.state && history.state.m ? history.back() : closeMovie();
   $("#fav").onclick = () => toggleStar(m);
+  const pl = $("#play"); if (pl) pl.onclick = async ev => {
+    ev.stopPropagation(); pl.disabled = true;
+    const url = (await ensureDetails(), detOf(m).video);
+    if (!url) { toast("预告片地址还没取到，过一会儿再试"); pl.disabled = false; return; }
+    const box = $("#cposter"); S.playing = true; box.classList.add("vid");
+    box.innerHTML = `<video src="${esc(url)}" controls playsinline autoplay poster="${esc(big(m.img, 480))}"></video>`;
+  };
+}
+/* 详情页里的点击：场次日期、场次、计划、关注影人 */
+$("#sheet").addEventListener("click", ev => {
+  const dc = ev.target.closest(".dchips button");
+  if (dc) { const wrap = dc.parentElement, k = wrap.dataset.sk, di = +dc.dataset.di; S.showDay[k] = di;
+    wrap.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === dc));
+    $("#sheet").querySelectorAll(`.shows[data-sk="${k}"]`).forEach(x => x.hidden = +x.dataset.di !== di); return; }
+  const sw = ev.target.closest("[data-show]");
+  if (sw) { const x = JSON.parse(sw.dataset.show), c = S.data.cinemas.find(c => c.id === x.c), m = movieOf(S.open);
+    sheetMenu(`${mdc(x.d)} ${wk(x.d)} ${x.t}`, [c && c.short, x.h, x.v, x.p && "¥" + x.p].filter(Boolean).join("  "), [
+      {label: "去猫眼选座", href: buyURL(x.c, S.open)},
+      {label: "已经买好了，记进观影计划", ghost: true, fn: () => openPlan(m, {date: x.d, time: x.t, cinema: c ? c.short : "", seat: x.h})}]); return; }
+  const pe = ev.target.closest("[data-plan-edit]");
+  if (pe) { const p = plans().find(x => x.id === pe.dataset.planEdit); if (p) openPlan(movieOf(p.mid) || planMovie(p), {}, p); return; }
+  const pn = ev.target.closest("[data-plan]");
+  if (pn) { const m = movieOf(pn.dataset.plan); if (m) openPlan(m); return; }
+  const ps = ev.target.closest("[data-person]");
+  if (ps) toggleFollow(ps.dataset.person);
+});
+async function toggleFollow(rule){
+  if (!gh.token()) { toast("关注需要先在设置里连接 GitHub，后台才知道要盯谁。", "去设置", openSettings); return; }
+  const on = !follows().map(plain).includes(plain(rule));
+  try {
+    await writeWatch(d => { d.follow = d.follow.filter(x => plain(x) !== plain(rule)); if (on) d.follow.push(rule); }, `${on ? "关注" : "取消关注"} ${rule}`);
+    dispatchRun(); render(); if (S.open && $("#sheet").classList.contains("on")) refreshMovie();
+    if ($("#settings").classList.contains("on")) renderSettings();
+    toast(on ? `已关注 ${rule}：西安有新片定档、开票都会推送` : `已取消关注 ${rule}`);
+  } catch (e) { toast(e.message); }
+}
+/* 底部弹出的小菜单 */
+function sheetMenu(title, sub, items){
+  const el = $("#rec");
+  el.innerHTML = `<div class="rec-back"></div><div class="rec-panel" role="dialog"><div class="grab"></div><h3>${esc(title)}</h3><p class="rec-mv">${esc(sub || "")}</p>
+    <div class="menu-btns">${items.map((it, k) => it.href ? `<a class="btn${it.ghost ? " ghost" : ""}" href="${esc(it.href)}" target="_blank" rel="noopener" data-k="${k}">${esc(it.label)}</a>`
+      : `<button class="btn${it.ghost ? " ghost" : ""}" data-k="${k}">${esc(it.label)}</button>`).join("")}</div></div>`;
+  el.classList.add("on");
+  el.querySelector(".rec-back").onclick = closeRecord;
+  el.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const it = items[+b.dataset.k]; closeRecord(); if (it.fn) setTimeout(it.fn, 250); });
+}
+const planMovie = p => ({id: p.mid, nm: p.nm || "", img: p.img || "", enm: "", rt: "", cat: "", src: "", dur: p.dur, wish: {}, opened: {}});
+/* 观影计划：哪天几点、哪家影院、影厅座位 */
+function openPlan(m, pre = {}, existing = null){
+  const p = existing || {}, cs = S.data.cinemas;
+  const o = openedAt(m), def = pre.date || p.date || (o.length ? o.map(x => x[1].first).sort()[0] : (m.rt && m.rt.length === 10 && daysTo(m.rt) >= 0 ? m.rt : todayStr()));
+  let cinema = pre.cinema ?? p.cinema ?? (o[0] ? o[0][0].short : (cs[0] || {}).short || "");
+  const isMine = cs.some(c => c.short === cinema);
+  const el = $("#rec");
+  el.innerHTML = `<div class="rec-back"></div><div class="rec-panel" role="dialog" aria-label="观影计划">
+    <div class="grab"></div><h3>${existing ? "改一下计划" : "记进观影计划"}</h3><p class="rec-mv">《${esc(m.nm)}》${gh.token() ? "开场前一小时左右推送提醒，也会出现在订阅的日历里" : "（连接 GitHub 后才会推送提醒）"}</p>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:8px">
+      <label class="f" style="margin:0"><span>哪天</span><input type="date" id="pDate" value="${esc(def)}"></label>
+      <label class="f" style="margin:0"><span>几点开场</span><input type="time" id="pTime" value="${esc(pre.time || p.time || "")}"></label></div>
+    <div class="f" style="margin-top:8px"><span>哪家影院</span><div class="chips" id="pCine">
+      ${cs.map(c => `<button class="chip" data-c="${esc(c.short)}" aria-pressed="${c.short === cinema}">${esc(c.short)}</button>`).join("")}
+      <button class="chip" data-c="" aria-pressed="${!isMine && !!cinema}">其他影院</button></div>
+      <input id="pOther" placeholder="影院名称" value="${isMine ? "" : esc(cinema)}" ${isMine || !cinema ? "hidden" : ""} style="margin-top:8px"></div>
+    <label class="f"><span>影厅和座位</span><input id="pSeat" value="${esc(pre.seat || p.seat || "")}" placeholder="比如 IMAX厅 7排12座（选填）"></label>
+    <button class="btn wide" id="pSave">${existing ? "保存" : "记下来"}</button>
+    ${existing ? `<button class="rv-del" id="pDel">删除这个计划</button>` : ""}</div>`;
+  el.classList.add("on");
+  el.querySelector(".rec-back").onclick = closeRecord;
+  let other = !isMine && !!cinema;
+  el.querySelectorAll("#pCine .chip").forEach(b => b.onclick = () => {
+    el.querySelectorAll("#pCine .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
+    other = !b.dataset.c; cinema = b.dataset.c; $("#pOther").hidden = !other; if (other) $("#pOther").focus(); });
+  $("#pSave").onclick = async () => {
+    const date = $("#pDate").value; if (!date) { toast("先选一下哪天"); return; }
+    const np = {id: p.id || "p" + Date.now().toString(36), mid: m.id, nm: m.nm, img: m.img, dur: m.dur || null, date, time: $("#pTime").value || "",
+      cinema: other ? $("#pOther").value.trim() : cinema, seat: $("#pSeat").value.trim(), at: p.at || new Date().toISOString()};
+    $("#pSave").disabled = true;
+    try { await savePlans(l => { const k = l.findIndex(x => x.id === np.id); k >= 0 ? l.splice(k, 1, np) : l.push(np); }, `观影计划《${m.nm}》${date}`);
+      closeRecord(); render(); if (S.open) refreshMovie();
+      toast(np.time ? `记下了：${mdc(date)} ${np.time}${gh.token() ? "，开场前一小时提醒你" : ""}` : `记下了：${mdc(date)}，补上开场时间才能提醒你`);
+    } catch (e) { $("#pSave").disabled = false; toast(e.message); }
+  };
+  const del = $("#pDel"); if (del) del.onclick = async () => {
+    if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "再点一次确认删除"; return; }
+    try { await savePlans(l => { const k = l.findIndex(x => x.id === p.id); if (k >= 0) l.splice(k, 1); }, `删除观影计划《${m.nm}》`);
+      closeRecord(); render(); if (S.open) refreshMovie(); toast("已删除这个计划"); } catch (e) { toast(e.message); }
+  };
 }
 /* 数据刷新后重画详情页，保持滚动位置 */
-function refreshMovie(){ const sh = $("#sheet"), y = sh.scrollTop; openMovie(S.open, false, true); sh.scrollTop = y; }
+function refreshMovie(){ if (S.playing) return; const sh = $("#sheet"), y = sh.scrollTop; openMovie(S.open, false, true); sh.scrollTop = y; }
 $("#sheet").addEventListener("scroll", () => { const b = $("#sheet .sbar"); if (b) b.classList.toggle("solid", $("#sheet").scrollTop > 250); }, {passive: true});
-function closeMovie(){ S.open = null; $("#sheet").classList.remove("on"); document.body.style.overflow = ""; if (location.hash) history.replaceState(null, "", location.pathname + location.search); }
+function closeMovie(){ S.open = null; S.playing = false; const v = $("#sheet video"); if (v) v.pause(); $("#sheet").classList.remove("on"); document.body.style.overflow = ""; if (location.hash) history.replaceState(null, "", location.pathname + location.search); }
 /* 侧滑返回时，把记录面板、票根弹窗也一起关掉 */
 function closeOverlays(){ $("#rec").classList.remove("on"); $("#reveal").classList.remove("on"); }
 window.addEventListener("popstate", () => { closeOverlays(); const m = location.hash.match(/^#m(\d+)/); m ? openMovie(m[1], false) : closeMovie(); });
@@ -1163,12 +1522,13 @@ const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,
 
 async function readWatch(){
   const r = await gh.call("GET", `/contents/watch.json?t=${Date.now()}`);
-  if (r.status === 404) return {data: {stars: [], ticketing: "all"}, sha: null};
+  if (r.status === 404) return {data: {stars: [], ticketing: "all", follow: [], mute: [], plans: []}, sha: null};
   if (!r.ok) throw new Error(`读取星标失败（HTTP ${r.status}）`);
   const j = await r.json();
   let data; try { data = JSON.parse(b64d(j.content)); } catch { data = {}; }
   data.stars = Array.isArray(data.stars) ? data.stars.filter(x => x && x.id) : [];
   data.ticketing = data.ticketing === "starred" ? "starred" : "all";
+  for (const k of ["follow", "mute", "plans"]) data[k] = Array.isArray(data[k]) ? data[k] : [];
   return {data, sha: j.sha};
 }
 async function writeWatch(mutate, message){
@@ -1177,14 +1537,16 @@ async function writeWatch(mutate, message){
     mutate(data);
     const r = await gh.call("PUT", "/contents/watch.json", {message, sha: sha || undefined,
       content: b64e(JSON.stringify(data, null, 1) + "\n")});
-    if (r.ok) { S.watch = data; S.sha = (await r.json()).content.sha; return; }
+    if (r.ok) { S.watch = data; S.sha = (await r.json()).content.sha; favReset(); return; }
     if (r.status !== 409 && r.status !== 422) throw new Error(`保存失败（HTTP ${r.status}）`);
   }
   throw new Error("保存冲突，请稍后再试");
 }
 async function syncStars(){
   try {
-    const {data, sha} = await readWatch(); S.watch = data; S.sha = sha;
+    const {data, sha} = await readWatch(); S.watch = data; S.sha = sha; favReset();
+    const lp = getPref("plans", []);   // 连接前记在手机上的观影计划，一并传上去
+    if (lp.length) { await writeWatch(d => lp.forEach(p => { if (!d.plans.some(x => x.id === p.id)) d.plans.push(p); }), `观影计划 ${lp.length} 个`); setPref("plans", []); }
     if (S.local.size) {   // 连接前在手机上点过的星标，一并传上去
       const extra = [...S.local].filter(id => !data.stars.some(x => String(x.id) === id));
       if (extra.length) await writeWatch(d => extra.forEach(id => {
@@ -1197,13 +1559,14 @@ async function syncStars(){
   } catch (e) { toast(e.message); }
 }
 async function toggleStar(m){
-  const id = String(m.id), on = !isFav(m);
+  const id = String(m.id), on = !isFav(m), byFollow = !on && favWhy(m) !== "star";
   const btn = $("#fav");
   const paint = v => { if (btn) { btn.setAttribute("aria-pressed", v); btn.innerHTML = IC.star + (v ? "已星标" : "星标"); } };
+  if (!gh.token() && byFollow) return;
   if (!gh.token()) {
     if (!on && !S.local.has(id)) { toast("这颗星保存在 GitHub 上，先在设置里连接 GitHub 才能取消。", "去设置", openSettings); return; }
     on ? S.local.add(id) : S.local.delete(id); setPref("favs", [...S.local]);
-    paint(on); render();
+    favReset(); paint(on); render();
     if (on) toast("已在这台手机上星标。要收到推送，先在设置里连接 GitHub。", "去设置", openSettings);
     return;
   }
@@ -1211,11 +1574,13 @@ async function toggleStar(m){
   try {
     await writeWatch(d => {
       d.stars = d.stars.filter(x => String(x.id) !== id);
+      d.mute = d.mute.filter(x => String(x) !== id);
       if (on) d.stars.push({id: m.id, nm: m.nm, at: new Date().toISOString()});
+      else if (followHits(m, d.follow).length) d.mute.push(m.id);   // 因为关注才星标的：记下"这部不要"
     }, `${on ? "星标" : "取消星标"}《${m.nm}》`);
     dispatchRun();
     render(); if (S.open === id && $("#sheet").classList.contains("on")) refreshMovie();
-    toast(on ? `已星标《${m.nm}》，开票和开分都会推送给你` : `已取消星标《${m.nm}》`);
+    toast(on ? `已星标《${m.nm}》，开票和开分都会推送给你` : byFollow ? `《${m.nm}》不再提醒，关注的其他片子照常` : `已取消星标《${m.nm}》`);
   } catch (e) { paint(!on); toast(e.message); }
 }
 
@@ -1254,11 +1619,23 @@ function renderSettings(){
       <div class="err" id="tokErr" hidden></div>
       <p style="margin-top:10px;font-size:12px;color:var(--faint)">密钥只保存在这台手机的浏览器里。添加到主屏幕的网页和 Safari 里的是分开的，在哪个里面用就在哪个里面填。</p>`}
     </div>
+    <div class="block"><h3>关注系列和影人</h3>
+      <p>关注以后，相关的新片在西安定档、在你的影院开票、开分，都会推送，也会自动出现在待映页顶部。不想要某一部，在那部电影里取消星标就行。</p>
+      ${tok ? `<div class="follows" id="fPresets">${Object.keys((S.data && S.data.follow_presets) || {}).map(k => `<button class="chip" data-fp="${esc(k)}" aria-pressed="${follows().includes(k)}">${esc(k)}</button>`).join("")}</div>
+        ${follows().filter(k => !((S.data && S.data.follow_presets) || {})[k]).length ? `<div class="follows">${follows().filter(k => !((S.data && S.data.follow_presets) || {})[k]).map(k => `<button class="chip" aria-pressed="true" data-fx="${esc(k)}">${esc(k)}<i>×</i></button>`).join("")}</div>` : ""}
+        <div class="field"><input id="fNew" placeholder="演员、导演或片名关键词，如 凯尔·钱德勒" autocomplete="off"><button class="btn" id="fAdd">关注</button></div>
+        <p style="margin-top:8px;font-size:12px;color:var(--faint)">电影页的导演、主演名字也可以直接点一下关注。演员名单来自猫眼，只列了主要几位。</p>`
+      : `<p style="color:var(--faint)">先连接 GitHub，后台才知道要替你盯谁。</p>`}
+    </div>
+    <div class="block"><h3>外观</h3>
+      <label class="choice"><input type="radio" name="theme" value="doom" ${S.theme === "doom" ? "checked" : ""}><span>复联5<small>雾银底、斗篷绿、锻铜色，标题和倒计时也换了</small></span></label>
+      <label class="choice"><input type="radio" name="theme" value="classic" ${S.theme !== "doom" ? "checked" : ""}><span>经典<small>原来的浅灰底和珊瑚橙</small></span></label>
+    </div>
     <div class="block"><h3>开票提醒</h3>
       <label class="choice"><input type="radio" name="tm" value="all" ${w.ticketing !== "starred" ? "checked" : ""} ${tok ? "" : "disabled"}>
         <span>所有未上映的新片<small>你的影院有新片第一次开票就推送，星标的会加 ⭐</small></span></label>
       <label class="choice"><input type="radio" name="tm" value="starred" ${w.ticketing === "starred" ? "checked" : ""} ${tok ? "" : "disabled"}>
-        <span>只推送星标的电影<small>其他片子开票只在"已开票"里显示，不推送</small></span></label>
+        <span>只推送星标的电影<small>其他片子开票只显示在待映页的"已开票"里，不推送</small></span></label>
     </div>
     <div class="block"><h3>日历和主屏小组件</h3><div id="calBox"><p>${tok ? "读取中…" : "先连接 GitHub。星标的电影会出现在 iPhone 日历和主屏小组件里。"}</p></div></div>
     <div class="block"><h3>星标的电影（${stars.length}）</h3>
@@ -1295,6 +1672,9 @@ function renderSettings(){
     catch (e) { toast(e.message); renderSettings(); }
   });
   renderCal();
+  $("#settings").querySelectorAll("input[name=theme]").forEach(r => r.onchange = () => { S.theme = r.value; setPref("theme", S.theme); applyTheme(); render(); });
+  $("#settings").querySelectorAll("[data-fp],[data-fx]").forEach(b => b.onclick = () => toggleFollow(b.dataset.fp || b.dataset.fx));
+  const fa = $("#fAdd"); if (fa) fa.onclick = () => { const v = $("#fNew").value.trim(); if (v.length < 2) { toast("至少两个字"); return; } if (follows().map(plain).includes(plain(v))) { toast(`已经在关注 ${v} 了`); return; } toggleFollow(v); };
   $("#settings").querySelectorAll("[data-unstar]").forEach(b => b.onclick = async () => {
     const m = byId[b.dataset.unstar] || {id: +b.dataset.unstar, nm: ""};
     await toggleStar(m); renderSettings();
@@ -1389,6 +1769,7 @@ function mergeDiary(remote){
     if (sc && sc !== e.db) { e.db = sc; changed = true; }
     const local = S.diary.find(x => x.id === e.id);
     if (local && local.pb && !e.pb) { e.pb = local.pb; changed = true; }
+    if (local && local.photo && local.photo !== e.photo && (local.photoAt || "") >= (e.photoAt || "")) { e.photo = local.photo; e.photoAt = local.photoAt; changed = true; }
   }
   return {out, changed};
 }
@@ -1595,10 +1976,22 @@ function stubHTML(e, opt = {}){
 const segHTML = id => `<div class="seg" id="${id}"><button data-o="h" aria-pressed="${S.orient === "h"}">横版</button><button data-o="v" aria-pressed="${S.orient === "v"}">竖版</button></div>`;
 
 /* ---- 票夹页 ---- */
+/* 票夹顶部：观影计划（买好票还没看的；看完了的一键收进票夹） */
+function planCards(){
+  const now = new Date(), list = plans().sort((a, b) => planStart(a) - planStart(b));
+  if (!list.length) return "";
+  return `<div class="sec" style="margin-top:8px"><h3>观影计划</h3><span class="note">${list.length} 场</span></div><div class="plans">${list.map(p => {
+    const m = movieOf(p.mid) || planMovie(p), st = planStart(p), done = planEnd(p) < now, n = daysTo(p.date);
+    const when = done ? `<span class="go" data-recplan="${esc(p.id)}" data-rec-mid="${esc(p.mid)}">收进票夹</span>`
+      : `<b>${n <= 0 ? esc(p.time || "今天") : n === 1 ? "明天" : n + " 天"}</b><small>${n <= 0 ? (p.time ? "今天开场" : "") : `${md(p.date)} ${esc(p.time || "")}`}</small>`;
+    return `<button class="plan${done ? " done" : ""}" data-plan-open="${esc(p.id)}"><img src="${esc(m.img || p.img || "")}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
+      <div style="min-width:0"><div class="t">${esc(m.nm || p.nm)}</div><div class="s">${done ? "看完了吗？" : `${mdc(p.date)} ${wk(p.date)} ${esc(p.time || "")}`}</div><div class="s">${esc([p.cinema, p.seat].filter(Boolean).join("  ") || "还没填影院")}</div></div>
+      <div class="when">${when}</div></button>`; }).join("")}</div>`;
+}
 function walletView(){
   const s = diaryStats(), un = unlockedSet(s);
   const ordered = [...BADGES].sort((a, b) => (un.has(b.k) - un.has(a.k)) || progress(b, s) - progress(a, s));
-  let h = `<div class="wstats"><div><b>${s.n}</b><span>场电影</span></div><div><b>${Math.round(s.minutes / 60)}</b><span>小时</span></div><div><b>${s.cinemas}</b><span>家影院</span></div></div>
+  let h = planCards() + `<div class="wstats"${plans().length ? ` style="margin-top:18px"` : ""}><div><b>${s.n}</b><span>场电影</span></div><div><b>${Math.round(s.minutes / 60)}</b><span>小时</span></div><div><b>${s.cinemas}</b><span>家影院</span></div></div>
     ${yearCard()}
     <div class="sec"><h3>成就</h3><span class="note">${un.size} / ${BADGES.length}</span><button class="sec-more" id="allBadges">全部</button></div>
     <div class="hscroll badges">${ordered.map(b => badgeHTML(b, s, un)).join("")}</div>`;
@@ -1773,19 +2166,22 @@ document.addEventListener("scroll", queueSheen, {passive: true, capture: true});
 
 /* ---- 记录观影 ---- */
 let REC = null;
-function openRecord(m){
+/* 从观影计划转成票根：日期、影院、座位都填好 */
+function recPre(pid){ const p = pid && plans().find(x => x.id === pid); return p ? {date: p.date, cinema: p.cinema, seat: p.seat, planId: p.id} : {}; }
+function openRecord(m, pre = {}){
   const today = new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Shanghai"});
   const opened = S.data.cinemas.filter(c => (m.opened || {})[String(c.id)]);
-  REC = {m, cinema: (opened[0] || S.data.cinemas[0] || {}).short || "", other: false, rating: 0, look: null};
+  const mineC = S.data.cinemas.some(c => c.short === pre.cinema);
+  REC = {m, cinema: pre.cinema != null ? pre.cinema : (opened[0] || S.data.cinemas[0] || {}).short || "", other: !!pre.cinema && !mineC, rating: 0, look: null, plan: pre.planId || null};
   const el = $("#rec");
   el.innerHTML = `<div class="rec-back"></div><div class="rec-panel" role="dialog" aria-label="记下这次观影">
     <div class="grab"></div><h3>记下这次观影</h3><p class="rec-mv">《${esc(m.nm)}》</p>
-    <label class="f"><span>哪天看的</span><input type="date" id="rDate" value="${today}" max="${today}"></label>
+    <label class="f"><span>哪天看的</span><input type="date" id="rDate" value="${esc(pre.date && pre.date <= today ? pre.date : today)}" max="${today}"></label>
     <div class="f"><span>在哪看的</span><div class="chips" id="rCine">
       ${S.data.cinemas.map(c => `<button class="chip" data-c="${esc(c.short)}" aria-pressed="${c.short === REC.cinema}">${esc(c.short)}</button>`).join("")}
-      <button class="chip" data-c="" aria-pressed="false">其他影院</button></div>
-      <input id="rOther" placeholder="影院名称" hidden></div>
-    <label class="f"><span>影厅和座位</span><input id="rSeat" placeholder="比如 IMAX厅 7排12座（选填）"></label>
+      <button class="chip" data-c="" aria-pressed="${REC.other}">其他影院</button></div>
+      <input id="rOther" placeholder="影院名称" value="${REC.other ? esc(REC.cinema) : ""}" ${REC.other ? "" : "hidden"}></div>
+    <label class="f"><span>影厅和座位</span><input id="rSeat" value="${esc(pre.seat || "")}" placeholder="比如 IMAX厅 7排12座（选填）"></label>
     <div class="f"><span>你的评分</span><div class="rstars" id="rStars">${[1,2,3,4,5].map(i => `<button data-v="${i}" aria-label="${i} 星">★</button>`).join("")}<span class="lab" id="rLab">点星星打分</span></div></div>
     <label class="f"><span>一句话</span><input id="rNote" maxlength="40" placeholder="写点什么（选填）"></label>
     <button class="btn wide" id="rSave">收进票夹</button></div>`;
@@ -1840,6 +2236,7 @@ async function saveRecord(){
     db: m.douban && m.douban.sc || null, wish: m.wish ? m.wish.maoyan : null, starred: isFav(m), at: new Date().toISOString()};
   await commitDiary(l => l.push({...e, pending: true}));
   closeRecord();
+  if (REC.plan) { const pid = REC.plan; savePlans(l => { const k = l.findIndex(x => x.id === pid); if (k >= 0) l.splice(k, 1); }, `看完了《${m.nm}》`).catch(() => {}); }
   const after = unlockedSet(diaryStats());
   showReveal(e, BADGES.filter(b => after.has(b.k) && !before.has(b.k)));
   if ($("#sheet").classList.contains("on")) openMovie(m.id, false);
@@ -1857,13 +2254,59 @@ function burst(){
   return `<div class="burst">${Array.from({length: 28}, (_, i) => { const a = i / 28 * Math.PI * 2, d = 90 + Math.random() * 100;
     return `<i style="background:${cols[i % cols.length]};--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 40}px;--r:${Math.random() * 540}deg;animation-delay:${.55 + Math.random() * .15}s"></i>`; }).join("")}</div>`;
 }
-function showReveal(e, fresh = null, keepAnim = true){
+/* ---- 票根背面：放一张那天的照片（存进私有仓库 photos/） ---- */
+function stubBackHTML(e){
+  const can = !!gh.token();
+  return `<div class="stub-back">${e.photo ? `<div class="ph"><img id="bkImg" alt=""></div>`
+    : `<button class="add" id="bkAdd" ${can ? "" : "disabled"}>${can ? "＋ 放一张那天的照片" : "连接 GitHub 后可以放照片"}<small>实体票根、海报前的合影都行</small></button>`}
+    <div class="bk-foot"><span>${esc(e.nm)}　${e.date.replace(/-/g, ".")}</span>${e.photo && can ? `<button id="bkChange">换一张</button>` : ""}</div>
+    <input type="file" id="bkFile" accept="image/*" hidden></div>`;
+}
+const photoCache = new Map();
+async function photoURL(path){
+  if (photoCache.has(path)) return photoCache.get(path);
+  const r = await gh.req(gh.dataRepo(), "GET", `/contents/${path}`, null, "application/vnd.github.raw");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const u = URL.createObjectURL(await r.blob()); photoCache.set(path, u); return u;
+}
+async function shrinkPhoto(file, max = 1400){
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas");
+    c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    return await new Promise(ok => c.toBlob(ok, "image/jpeg", .84));
+  } finally { URL.revokeObjectURL(url); }
+}
+function bindStubBack(e){
+  const img = $("#bkImg");
+  if (img && e.photo) photoURL(e.photo).then(u => img.src = u).catch(() => { img.replaceWith(Object.assign(document.createElement("div"), {className: "add", textContent: "照片暂时读不到"})); });
+  const file = $("#bkFile"), pick = ev => { ev.stopPropagation(); file.click(); };
+  const add = $("#bkAdd"), ch = $("#bkChange");
+  if (add) add.onclick = pick; if (ch) ch.onclick = pick;
+  if (file) file.onchange = async () => {
+    const f = file.files[0]; if (!f) return;
+    toast("正在上传照片…");
+    try {
+      const blob = await shrinkPhoto(f), path = `photos/${e.id}-${Date.now().toString(36)}.jpg`;
+      const r = await gh.call("PUT", `/contents/${path}`, {message: `票根照片《${e.nm}》`, content: await blobB64(blob)});
+      if (!r.ok) throw new Error(`上传失败（HTTP ${r.status}）`);
+      photoCache.set(path, URL.createObjectURL(blob));
+      await commitDiary(l => { const x = l.find(y => y.id === e.id); if (x) { x.photo = path; x.photoAt = new Date().toISOString(); } });
+      e.photo = path; showReveal(S.diary.find(x => x.id === e.id) || e, null, false, true);
+      toast("照片放好了");
+    } catch (err) { toast(err.message); }
+  };
+}
+function showReveal(e, fresh = null, keepAnim = true, back = false){
   const isNew = fresh !== null, no = serialOf(e.id), sp = specialOf(no);
   const el = $("#reveal");
   el.innerHTML = `<div class="rv-back"></div><div class="rv-in">
     <div class="rv-h"><b>${isNew ? (sp ? `第 ${no} 张，${SPECIAL[sp]}限定票根` : "收进票夹啦") : esc(e.nm)}</b>
       <span>${isNew ? `这是你的第 ${no} 张票根` : `第 ${no} 张票根，${mdc(e.date)}`}</span><br>${segHTML("rvSeg")}</div>
-    <div class="rv-stub${S.orient === "v" ? " vmode" : ""}">${stubHTML(e, {stamp: isNew && keepAnim})}</div>${isNew && keepAnim && fresh.length ? burst() : ""}
+    <div class="rv-stub${S.orient === "v" ? " vmode" : ""}"><div class="flip${back ? " on" : ""}" id="flip"><div class="flip-in">
+      <div class="face front">${stubHTML(e, {stamp: isNew && keepAnim})}</div><div class="face back">${stubBackHTML(e)}</div></div></div></div>
+    <p class="fliphint">点票根翻面${e.photo ? "，看那天的照片" : "，可以放一张那天的照片"}</p>${isNew && keepAnim && fresh.length ? burst() : ""}
     ${isNew && fresh.length ? `<div class="rv-badges">${fresh.map((b, i) => `<div class="rv-badge" style="animation-delay:${keepAnim ? 1 + i * .15 : 0}s">${medal(b)}<div><b>${b.n}<em>新成就</em></b><span>${b.d}</span></div></div>`).join("")}</div>` : ""}
     ${isNew && !gh.token() ? `<div class="localwarn"><b>这张票根只存在这台手机上</b><span>Safari 长期不打开时，数据可能被系统清掉；添加到主屏幕的版本和 Safari 里的也不互通。连接 GitHub 后会自动备份到你的私有仓库。</span><button id="rvConnect">去连接 GitHub</button></div>` : ""}
     <div class="rv-actions"><button class="btn ghost" id="rvSave">存为图片</button><button class="btn" id="rvOk">${isNew ? "好的" : "关闭"}</button></div>
@@ -1871,11 +2314,13 @@ function showReveal(e, fresh = null, keepAnim = true){
   </div>`;
   tintBack(e);
   el.classList.add("on"); observeStubs(); requestAnimationFrame(updateSheen);
+  $("#flip").onclick = ev => { if (ev.target.closest("button,input")) return; $("#flip").classList.toggle("on"); };
+  bindStubBack(e);
   const close = () => el.classList.remove("on");
   el.querySelector(".rv-back").onclick = close; $("#rvOk").onclick = close;
   $("#rvSave").onclick = () => saveStubImage(e);
   const cn = $("#rvConnect"); if (cn) cn.onclick = () => { close(); openSettings(); };
-  bindSeg("rvSeg", () => { showReveal(e, fresh, false); if (S.tab === "wallet") render(); });
+  bindSeg("rvSeg", () => { showReveal(e, fresh, false, $("#flip").classList.contains("on")); if (S.tab === "wallet") render(); });
   const del = $("#rvDel");
   if (del) del.onclick = async () => {
     if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "再点一次确认删除"; return; }
@@ -2055,16 +2500,22 @@ function watchCTA(m){
   const mine = S.diary.filter(e => String(e.mid) === String(m.id)).sort((a, b) => b.date.localeCompare(a.date));
   // 离上映还远、也没开票的片子，还看不了，不显示"看过了"；点映、提前场开票后就会出现
   const watchable = !m.unreleased || m.status === "now" || openedAt(m).length || (m.rt && m.rt.length === 10 && daysTo(m.rt) <= 1);
+  const ended = planOf(m.id).find(p => planEnd(p) < new Date());
+  if (ended) return `<div class="cta"><button class="rec-btn" data-rec="${m.id}" data-recplan="${esc(ended.id)}">${IC.check}看完了，收进票夹</button></div>`;
   if (!mine.length) return watchable ? `<div class="cta"><button class="rec-btn" data-rec="${m.id}">${IC.check}看过了，收进票夹</button></div>` : "";
   return `<div class="cta"><button class="seen" data-entry="${mine[0].id}"><span>看过${mine.length > 1 ? ` ${mine.length} 次` : ""}</span>${mdc(mine[0].date)}，查看票根</button>
     <button class="rec-again" data-rec="${m.id}">再记一次</button></div>`;
 }
 document.getElementById("sheet").addEventListener("click", ev => {
-  const r = ev.target.closest("[data-rec]"); if (r) { const m = S.data.movies.find(x => String(x.id) === r.dataset.rec); if (m) openRecord(m); return; }
+  const r = ev.target.closest("[data-rec]"); if (r) { const m = S.data.movies.find(x => String(x.id) === r.dataset.rec); if (m) openRecord(m, recPre(r.dataset.recplan)); return; }
   const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); }
 });
 document.getElementById("main").addEventListener("click", ev => {
   if (ev.target.closest("#walletSeg")) return;
+  const rp = ev.target.closest("[data-recplan]");
+  if (rp) { const p = plans().find(x => x.id === rp.dataset.recplan); if (p) openRecord(movieOf(p.mid) || planMovie(p), recPre(p.id)); return; }
+  const po = ev.target.closest("[data-plan-open]");
+  if (po) { const p = plans().find(x => x.id === po.dataset.planOpen); if (p) { const m = movieOf(p.mid); m && planEnd(p) >= new Date() ? openMovie(m.id) : openPlan(m || planMovie(p), {}, p); } return; }
   const en = ev.target.closest("[data-entry]"); if (en) { const e = S.diary.find(x => x.id === en.dataset.entry); if (e) showReveal(e); return; }
   const bd = ev.target.closest("[data-badge]"); if (bd) { openBadge(bd.dataset.badge); return; }
   const yr = ev.target.closest("#yrBtn"); if (yr) { openReport(yr.dataset.year); return; }
@@ -2097,7 +2548,7 @@ document.addEventListener("keydown", e => { if (e.key !== "Escape") return;
 addEventListener("scroll", () => $("#bar").classList.toggle("scrolled", scrollY > 4), {passive: true});
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S.data && Date.now() - new Date(S.statusAt || S.data.updated) > 3e5) load(); });
 
-S.tab = getPref("tab3", "coming");
+S.tab = getPref("tab3", "coming"); if (!TITLES[S.tab]) S.tab = "coming";
 document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === S.tab));
 moveInd(); requestAnimationFrame(moveInd);
 load();

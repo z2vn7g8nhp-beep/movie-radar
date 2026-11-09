@@ -1265,10 +1265,10 @@ function feedView(){
 }
 /* 数据来源：都正常就收成一行，有异常的直接展开 */
 function foot(){
-  const names = {maoyan:"猫眼", tpp:"淘票票", douban:"豆瓣", imdb:"IMDb", rt:"烂番茄", data:"星标数据"};
+  const names = {maoyan:"猫眼", tpp:"淘票票", douban:"豆瓣", imdb:"IMDb", rt:"烂番茄", data:"星标数据", push:"手机推送"};
   S.data.cinemas.forEach(c => names["cinema:" + c.id] = c.short);
   // 太久没更新也算异常，不能还亮绿灯：影院 1 小时、片单 2 小时、IMDb 8 小时
-  const lim = k => k === "imdb" ? 288e5 : k === "maoyan" || k === "tpp" ? 72e5 : 36e5;
+  const lim = k => k === "push" ? Infinity : k === "imdb" ? 288e5 : k === "maoyan" || k === "tpp" ? 72e5 : 36e5;
   const ents = Object.entries(S.status).filter(([k]) => names[k]), bad = ents.filter(([, v]) => !v.ok);
   const stale = !navigator.onLine || (S.statusAt && Date.now() - new Date(S.statusAt) > 18e5), warn = bad.length || stale;
   const items = ents.map(([k, v]) => `<li><span class="dot${v.ok && !(Date.now() - new Date(v.at) > lim(k)) ? "" : " bad"}"></span>${names[k]}  ${v.ok ? ago(v.at) + "更新" : esc(v.msg)}</li>`).join("");

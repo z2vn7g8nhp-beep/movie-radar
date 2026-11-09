@@ -60,6 +60,7 @@ jobs:
         if: inputs.mode == 'test-push'
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
+          BARK_SERVER: ${{ vars.BARK_SERVER }}  # 和正式推送用同一套设置，测试通了正式的才一定通
         run: python scraper/run.py --test-push
 
       - name: 抓取数据

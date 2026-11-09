@@ -247,7 +247,7 @@ class Radar:
                      "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "wiki_at": {},
                      "douban": {}, "rt": {}, "opened": {}, "cinemas_ok": {},
                      "history": {}, "events": [], "scored": {}, "known": {}, "fails": {},
-                     "plan_done": {}}.items():
+                     "plan_done": {}, "push_pending": []}.items():
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
         self.events = []
@@ -978,7 +978,7 @@ class Radar:
         alert = self.cfg["notify"].get("starred_ticket_alert", "call")
         for i, ((title, star), bodies) in enumerate(sorted(groups.items(), key=lambda kv: not kv[0][1])):
             if i >= 6:
-                notify.push("🎬 电影雷达", f"还有 {len(groups) - 6} 条动态，打开网页查看", url)
+                self.push("🎬 电影雷达", f"还有 {len(groups) - 6} 条动态，打开网页查看", url)
                 break
             body = "\n".join(bodies[:8]) + (f"\n…等 {len(bodies)} 条" if len(bodies) > 8 else "")
             ticket = "开票" in title
@@ -992,7 +992,53 @@ class Radar:
                 link = one["buy"]  # 只有一部新开票：点推送直接进猫眼这家影院的排片页
             elif one and url and one.get("mid"):
                 link = f"{url}#m{one['mid']}"
-            notify.push(title, body, link, level, call=call)
+            self.push(title, body, link, level, call)
+
+    def push(self, title, body, link=None, level=None, call=False):
+        """发一条推送；没发出去的存起来，下一轮再补发（开票提醒不能就这么丢了）。"""
+        ok = notify.push(title, body, link, level, call=call)
+        if ok:
+            self.mark("push", True, "推送正常")
+        else:
+            self.state["push_pending"].append({"at": NOW_S, "title": title, "body": body, "url": link,
+                                               "level": level, "call": call})
+            self.mark("push", False, "推送没发出去，下一轮会自动补发；一直这样请检查 BARK_KEY")
+        return ok
+
+    def retry_pushes(self):
+        """补发上一轮没发出去的推送；超过 12 小时的就不补了，免得半夜收到过期消息。"""
+        if self.args.dry_run:
+            return
+        pend, self.state["push_pending"] = self.state.get("push_pending") or [], []
+        pend = [p for p in pend if ago(p["at"]) < timedelta(hours=12)]
+        for p in pend[:6]:
+            at = datetime.fromisoformat(p["at"]).astimezone(TZ)
+            self.push(p["title"], f"{p['body']}\n（补发，原本在 {at:%H:%M} 推送）", p.get("url"), p.get("level"),
+                      p.get("call", False))
+
+    def backfill_missed(self):
+        """一次性：以前 BARK_SERVER 为空导致推送全没发出去，把最近两天、首场还没过的开票提醒补发一条汇总。"""
+        st = self.state
+        if st.get("push_fix_backfill") or self.args.dry_run:
+            return
+        lines, star_any = [], False
+        for e in st["events"]:
+            if e.get("type") != "ticketing" or not e.get("push") or ago(e["at"]) > timedelta(hours=48):
+                continue
+            mid = str(e.get("mid") or "")
+            if mid and not self.unreleased(mid):
+                continue
+            star = bool(mid) and self.watched(mid, (st["movies"].get(mid) or {}).get("nm"))
+            star_any = star_any or star
+            cin = e["title"].replace("🎟", "").replace("开票了", "").strip()
+            lines.append(f"{'⭐ ' if star else ''}{cin}：{e['body']}")
+        if lines:
+            ok = self.push("📮 补发：之前漏推的开票", "推送之前坏了，这些开票没提醒到你，抱歉！\n" + "\n".join(lines[:8]),
+                           site_url(self.cfg), "timeSensitive", star_any)
+            if not ok:
+                st["push_pending"].pop()  # 下一轮重新走补发汇总，不重复排队
+                return
+        st["push_fix_backfill"] = NOW_S
 
     # ------------------------------------------------------------ main
     def run(self):
@@ -1018,8 +1064,10 @@ class Radar:
                             "body": f"正在盯 {len(self.cfg['cinemas'])} 家影院（未上映已开票 {n} 部），"
                                     f"之后有新片开票会第一时间提醒你"}]
         self.check_plans()
-        self.write_outputs()
+        self.retry_pushes()
+        self.backfill_missed()
         self.send()
+        self.write_outputs()
         self.events = []
         self.sprint()
 

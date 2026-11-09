@@ -23,7 +23,10 @@ def push(title, body, url=None, level=None, call=False):
     if not keys:
         print(f"[推送-未配置BARK_KEY] {title} | {body}")
         return False
-    server = os.environ.get("BARK_SERVER", "https://api.day.app").rstrip("/")
+    # 没设 BARK_SERVER 变量时 GitHub 会传进空字符串，不能直接拿来用（以前就是这里导致推送全部失败）
+    server = (os.environ.get("BARK_SERVER") or "").strip().rstrip("/") or "https://api.day.app"
+    if not server.startswith(("http://", "https://")):
+        server = "https://" + server
     ok = True
     for k in keys:
         payload = {"device_key": k, "title": title, "body": body, "group": "电影雷达",
@@ -43,6 +46,6 @@ def push(title, body, url=None, level=None, call=False):
                 print(f"[推送失败] HTTP {r.status_code} {r.text[:120]}")
         except requests.RequestException as e:
             ok = False
-            print(f"[推送失败] {e}")
-    print(f"[推送] {title} | {body}")
+            print(f"[推送失败] {e.__class__.__name__}")
+    print(f"[{'推送' if ok else '推送没发出去'}] {title} | {body}")
     return ok

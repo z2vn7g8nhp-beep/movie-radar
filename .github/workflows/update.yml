@@ -39,14 +39,26 @@ jobs:
 
       - name: 取回上一次的数据
         run: |
-          if git fetch --depth=1 origin radar-data 2>/dev/null; then
+          # 分清"数据分支真的还没有"（第一次运行）和"这一下没连上"：
+          # 没连上就重试，还不行就让这一轮失败，绝不能当成第一次运行把记忆清空（那样会漏掉刚开的票）
+          found=""
+          for i in 1 2 3 4; do
+            rc=0; git ls-remote --exit-code --heads origin radar-data >/dev/null 2>&1 || rc=$?
+            if [ "$rc" = 0 ] && git fetch --depth=1 origin radar-data; then found=yes; break; fi
+            if [ "$rc" = 2 ]; then found=none; break; fi
+            echo "第 $i 次取数据没成功，$((i * 6)) 秒后重试"; sleep $((i * 6))
+          done
+          if [ "$found" = yes ]; then
             mkdir -p _store && git archive FETCH_HEAD | tar -x -C _store
+            test -s _store/state/state.json || { echo "取回的数据不完整，这一轮先不跑"; exit 1; }
             mkdir -p state docs/data
-            cp -r _store/state/. state/ 2>/dev/null || true
+            cp -r _store/state/. state/
             cp -r _store/data/. docs/data/ 2>/dev/null || true
             rm -rf _store
-          else
+          elif [ "$found" = none ]; then
             echo "第一次运行，没有历史数据"
+          else
+            echo "连不上数据分支，这一轮先不跑，下一轮再试"; exit 1
           fi
 
       - uses: actions/setup-python@v6

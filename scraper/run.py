@@ -13,6 +13,8 @@
 """
 import argparse
 import base64
+import hashlib
+import hmac
 import json
 import os
 import random
@@ -154,19 +156,26 @@ def load_watch():
     repo, token = os.environ.get("DATA_REPO", "").strip(), os.environ.get("DATA_TOKEN", "").strip()
     w, ok = None, True
     if repo and token:
-        try:
-            r = requests.get(f"https://api.github.com/repos/{repo}/contents/watch.json", timeout=20,
-                             headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.raw"})
-            if r.status_code == 200:
-                w = r.json()
-            elif r.status_code == 404:
-                w = {}
-            else:
+        for attempt in range(3):  # 偶尔连不上就多试两次；密钥失效（401/403）重试也没用，直接算失败
+            ok = True
+            try:
+                r = requests.get(f"https://api.github.com/repos/{repo}/contents/watch.json", timeout=20,
+                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.raw"})
+                if r.status_code == 200:
+                    w = r.json()
+                    break
+                if r.status_code == 404:
+                    w = {}
+                    break
                 ok = False
                 print(f"[失败] 读取私有仓库星标 HTTP {r.status_code}")
-        except (requests.RequestException, ValueError) as e:
-            ok = False
-            print(f"[失败] 读取私有仓库星标：{e.__class__.__name__}")
+                if r.status_code in (401, 403) and "rate limit" not in r.text.lower():
+                    break
+            except (requests.RequestException, ValueError) as e:
+                ok = False
+                print(f"[失败] 读取私有仓库星标：{e.__class__.__name__}")
+            if attempt < 2:
+                time.sleep(3 + attempt * 4)
     if w is None:
         w = load_json(ROOT / "watch.json", {}) or {}
     stars = {}
@@ -247,7 +256,7 @@ class Radar:
                      "tpp_kw": {}, "imdb_map": {}, "imdb_ratings": {}, "wiki_at": {},
                      "douban": {}, "rt": {}, "opened": {}, "cinemas_ok": {},
                      "history": {}, "events": [], "scored": {}, "known": {}, "fails": {},
-                     "plan_done": {}, "push_pending": []}.items():
+                     "plan_done": {}, "push_pending": [], "watch_cache": []}.items():
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
         self.events = []
@@ -271,6 +280,9 @@ class Radar:
     def watched(self, mid, nm):
         """星标的，或命中"关注的系列 / 影人"的（手动取消过的除外）。"""
         mid = str(mid)
+        if not self.watch_ok:
+            # 这轮没读到星标：按上一次读到时的记录来，星标片照样响铃、照样冲刺盯票
+            return self.watch_key(mid) in set(self.state.get("watch_cache") or [])
         if mid in self.stars:
             return True
         if mid in self.mute:
@@ -285,6 +297,17 @@ class Radar:
             r = self.state["movies"].get(mid) or {"nm": nm}
             return bool(follow_hits(self.follow, r))
         return False
+
+    @staticmethod
+    def watch_key(mid):
+        """星标是私密的，而 state 存在公开分支里，所以只存用密钥加盐的指纹，别人看不出是哪部。"""
+        salt = os.environ.get("DATA_TOKEN", "").strip().encode()
+        return hmac.new(salt, str(mid).encode(), hashlib.sha256).hexdigest()[:20]
+
+    def remember_watch(self):
+        if self.watch_ok and os.environ.get("DATA_TOKEN", "").strip():
+            self.state["watch_cache"] = sorted(self.watch_key(mid) for mid, r in self.state["movies"].items()
+                                               if self.watched(mid, r.get("nm")))
 
     def opened_anywhere(self, mid):
         return any(mid in o for o in self.state["opened"].values())
@@ -913,7 +936,7 @@ class Radar:
     def sprint_targets(self):
         """星标（含关注命中）、还没上映、离上映不到 N 天、还有影院没开票的片子。"""
         sp = self.cfg.get("sprint") or {}
-        if sp.get("enabled") is False or not self.watch_ok:
+        if sp.get("enabled") is False or not (self.watch_ok or self.state.get("watch_cache")):
             return []
         days = int(sp.get("days_before", 30))
         cids = [str(c["id"]) for c in self.cfg["cinemas"]]
@@ -994,14 +1017,15 @@ class Radar:
                 link = f"{url}#m{one['mid']}"
             self.push(title, body, link, level, call)
 
-    def push(self, title, body, link=None, level=None, call=False):
-        """发一条推送；没发出去的存起来，下一轮再补发（开票提醒不能就这么丢了）。"""
+    def push(self, title, body, link=None, level=None, call=False, pending=None):
+        """发一条推送；没发出去的存起来，下一轮再补发（开票提醒不能就这么丢了）。
+        pending：这是在补发哪一条。又没发出去时把原来那条原样放回去（保留最初的时间和正文）。"""
         ok = notify.push(title, body, link, level, call=call)
         if ok:
             self.mark("push", True, "推送正常")
         else:
-            self.state["push_pending"].append({"at": NOW_S, "title": title, "body": body, "url": link,
-                                               "level": level, "call": call})
+            self.state["push_pending"].append(pending or {"at": NOW_S, "title": title, "body": body, "url": link,
+                                                          "level": level, "call": call})
             self.mark("push", False, "推送没发出去，下一轮会自动补发；一直这样请检查 BARK_KEY")
         return ok
 
@@ -1014,7 +1038,8 @@ class Radar:
         for p in pend[:6]:
             at = datetime.fromisoformat(p["at"]).astimezone(TZ)
             self.push(p["title"], f"{p['body']}\n（补发，原本在 {at:%H:%M} 推送）", p.get("url"), p.get("level"),
-                      p.get("call", False))
+                      p.get("call", False), pending=p)
+        self.state["push_pending"].extend(pend[6:])  # 一轮最多补 6 条，剩下的留到下一轮，不丢
 
     def backfill_missed(self):
         """一次性：以前 BARK_SERVER 为空导致推送全没发出去，把最近两天、首场还没过的开票提醒补发一条汇总。"""
@@ -1055,6 +1080,7 @@ class Radar:
             except Exception as e:  # noqa: BLE001
                 traceback.print_exc()
                 self.mark({"lists": "maoyan"}.get(name, name), False, f"程序出错：{e.__class__.__name__}")
+        self.remember_watch()
         self.check_scores()
         self.check_health()
         if first and any(k.startswith("cinema:") and v.get("ok") for k, v in self.status.items()):

@@ -31,8 +31,7 @@ def push(title, body, url=None, level=None, call=False, tries=3):
         server = "https://" + server
     ok = True
     for k in keys:
-        payload = {"device_key": k, "title": title, "body": body, "group": "电影雷达",
-                   "sound": "minuet"}
+        payload = {"device_key": k, "title": title, "body": body, "group": "电影雷达"}  # 不指定 sound，用 Bark 默认的普通提示音
         if url:
             payload["url"] = url
         if level:

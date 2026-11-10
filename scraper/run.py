@@ -260,6 +260,7 @@ class Radar:
             st.setdefault(k, v)
         self.status = load_json(OUT / "status.json", {}).get("sources", {})
         self.events = []
+        self.bark_down = False
         self.my = Maoyan(cfg["city"]["maoyan_ci"])
         self.tpp = Taopiaopiao(cfg["city"]["tpp_citycode"])
         self.imdb = IMDb()
@@ -469,7 +470,16 @@ class Radar:
                             "count": sum(len(d["shows"]) for d in m["days"]),
                             "shows": self.compact_shows(m["days"])}
                 if not first_time:
-                    new.append((mid, m, reg[mid]))
+                    # 登记的同时就把提醒记下来：后面处理别的片子万一出错，这条也不会被吞掉
+                    new.append(mid)
+                    o, star = reg[mid], self.watched(mid, m["nm"])
+                    rt = (self.state["movies"].get(mid) or {}).get("rt")
+                    body = f"《{m['nm']}》首场 {md(o['first'])}"
+                    if rt and len(rt) == 10 and o["first"] != rt:
+                        body += f"，{md(rt)}正式上映"
+                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
+                               push=self.ticket_mode == "all" or star, star=star,
+                               buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
             # 上映超过 7 天的从登记表里清掉；上映了的不再留场次
             week_ago = (NOW - timedelta(days=7)).date().isoformat()
             for mid in list(reg):
@@ -480,16 +490,6 @@ class Radar:
                 elif not self.unreleased(mid):
                     reg[mid].pop("shows", None)
             self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
-            if new:
-                for mid, m, o in new:
-                    star = self.watched(mid, m["nm"])
-                    rt = (self.state["movies"].get(mid) or {}).get("rt")
-                    body = f"《{m['nm']}》首场 {md(o['first'])}"
-                    if rt and len(rt) == 10 and o["first"] != rt:
-                        body += f"，{md(rt)}正式上映"
-                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
-                               push=self.ticket_mode == "all" or star, star=star,
-                               buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
             # 只数还没上映的，和网页上"已开票"里显示的一致
             n_pre = sum(1 for mid in data["movies"] if mid in reg and self.unreleased(mid))
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
@@ -928,9 +928,9 @@ class Radar:
                 mins = int(left.total_seconds() // 60)
                 where = " · ".join(x for x in (p.get("cinema"), p.get("seat")) if x)
                 body = f"《{p.get('nm') or ''}》{p.get('time')} 开场" + (f"\n{where}" if where else "")
-                notify.push(f"🍿 还有 {mins} 分钟开场" if mins < 60 else "🍿 一小时后开场", body,
-                            f"{url}#m{p['mid']}" if url and p.get("mid") else url, "timeSensitive")
-                done[str(p["id"])] = NOW_S
+                if notify.push(f"🍿 还有 {mins} 分钟开场" if mins < 60 else "🍿 一小时后开场", body,
+                               f"{url}#m{p['mid']}" if url and p.get("mid") else url, "timeSensitive"):
+                    done[str(p["id"])] = NOW_S  # 没发出去就不记，下一轮（开场前）再试
 
     # ------------------------------------------------------------ 冲刺盯票
     def sprint_targets(self):
@@ -968,14 +968,21 @@ class Radar:
             time.sleep(gap + random.uniform(-8, 8))
             tick()
             self.events = []
-            self.update_cinemas()
+            crashed = False
+            try:
+                self.update_cinemas()
+            except Exception:  # noqa: BLE001  出错也要把已经查到的开票发出去
+                traceback.print_exc()
+                crashed = True
             rounds += 1
             bad = [c for c in self.cfg["cinemas"] if not self.status.get(f"cinema:{c['id']}", {}).get("ok")]
-            fails = fails + 1 if bad else 0
-            self.check_plans()
+            fails = fails + 1 if (bad or crashed) else 0
+            self.safely(self.check_plans)
+            if self.state["push_pending"]:
+                self.safely(self.retry_pushes)  # 没发出去的不等下一轮，每分钟补一次
             if self.events:
-                self.write_outputs()
                 self.send()
+                self.write_outputs()
             if fails >= 2 or not self.sprint_targets():
                 break   # 连着失败两次（可能被限流）就先停，下一轮再说
         self.mark("sprint", True, f"冲刺盯票 {rounds} 次")
@@ -1017,10 +1024,21 @@ class Radar:
                 link = f"{url}#m{one['mid']}"
             self.push(title, body, link, level, call)
 
+    @staticmethod
+    def safely(fn):
+        """次要步骤出错只打印，不能连累开票推送。"""
+        try:
+            fn()
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+            print(f"[失败] {fn.__name__} 出错，已跳过")
+
     def push(self, title, body, link=None, level=None, call=False, pending=None):
         """发一条推送；没发出去的存起来，下一轮再补发（开票提醒不能就这么丢了）。
         pending：这是在补发哪一条。又没发出去时把原来那条原样放回去（保留最初的时间和正文）。"""
-        ok = notify.push(title, body, link, level, call=call)
+        # 这一轮已经确认 Bark 连不上时就不再每条都重试三遍，免得一轮拖太久
+        ok = notify.push(title, body, link, level, call=call, tries=1 if (pending or self.bark_down) else 3)
+        self.bark_down = not ok
         if ok:
             self.mark("push", True, "推送正常")
         else:
@@ -1080,18 +1098,16 @@ class Radar:
             except Exception as e:  # noqa: BLE001
                 traceback.print_exc()
                 self.mark({"lists": "maoyan"}.get(name, name), False, f"程序出错：{e.__class__.__name__}")
-        self.remember_watch()
-        self.check_scores()
-        self.check_health()
+        for fn in (self.remember_watch, self.check_scores, self.check_health):
+            self.safely(fn)
         if first and any(k.startswith("cinema:") and v.get("ok") for k, v in self.status.items()):
             self.state["bootstrapped"] = True
             n = sum(len(o) for o in self.state["opened"].values())
             self.events = [{"at": NOW_S, "type": "system", "title": "✅ 电影雷达已启动",
                             "body": f"正在盯 {len(self.cfg['cinemas'])} 家影院（未上映已开票 {n} 部），"
                                     f"之后有新片开票会第一时间提醒你"}]
-        self.check_plans()
-        self.retry_pushes()
-        self.backfill_missed()
+        for fn in (self.check_plans, self.retry_pushes, self.backfill_missed):
+            self.safely(fn)
         self.send()
         self.write_outputs()
         self.events = []

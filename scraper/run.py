@@ -410,7 +410,14 @@ class Radar:
                 mid = str(rec["id"])
                 star = self.watched(mid, rec.get("nm"))
                 # 关注的系列 / 影人有新片定档，不管"新片定档"开关都推送
-                self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=mid,
+                rt = rec.get("rt") or ""
+                if len(rt) == 10:
+                    title, body = "🆕 新片定档", f"《{rec['nm']}》{rt} 上映"
+                else:
+                    # 先官宣引进/上映、日期待定的：之后定下日期会再记一条"📅 定档"
+                    when = f"{rt[:4]}年{int(rt[5:7])}月" if len(rt) == 7 else (f"{rt}年" if rt else "")
+                    title, body = "🆕 官宣上映", f"《{rec['nm']}》{when}上映，日期待定"
+                self.event("coming", title, body, mid=mid,
                            push=bool(self.cfg["notify"].get("new_coming_movies")) or star, star=star)
             for rec, old in dated[:10]:
                 mid = str(rec["id"])

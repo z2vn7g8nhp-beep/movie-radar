@@ -1433,7 +1433,7 @@ function feedView(){
     if (e.type === "coming" && nm) bd = bd.replace(/^(\d{4}) 上映$/, "$1 年上映，日期待定");
     return `<button class="ev${st ? " star" : ""}" ${e.mid ? `data-id="${e.mid}"` : ""}>
       ${mv ? `<img class="ph" loading="lazy" src="${esc(mv.img)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">` : `<span class="ic">${EV_IC[e.type] || EV_IC.system}</span>`}
-      <div style="min-width:0"><div class="tt"><span>${esc(tt)}</span>${nm ? `<i class="kind ${e.type}">${EV_KIND[e.type] || ""}</i>` : ""}</div><div class="bd">${esc(bd)}</div></div>
+      <div style="min-width:0"><div class="tt"><span>${esc(tt)}</span>${nm ? `<i class="kind ${e.type}">${e.type === "coming" ? (/改档/.test(e.title) ? "改档" : /官宣/.test(e.title) ? "官宣" : "定档") : (EV_KIND[e.type] || "")}</i>` : ""}</div><div class="bd">${esc(bd)}</div></div>
       <time>${esc(hm(e.at).split(" ")[1] || "")}</time></button>`;
   }).join("") + `</div>`).join("");
 }

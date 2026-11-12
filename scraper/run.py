@@ -288,6 +288,9 @@ class Radar:
             return True
         if mid in self.mute:
             return False
+        # 同一部片在影院排片里偶尔是另一个编号：片名和星标的一样也算星标，照样响铃
+        if nm and norm_name(nm) in {norm_name(x) for x in self.stars.values() if x}:
+            return True
         for w in self.cfg.get("watch") or []:
             w = str(w).strip()
             if not w:
@@ -469,57 +472,83 @@ class Radar:
             except SourceError as e:
                 self.mark(f"cinema:{cid}", False, str(e))
                 continue
-            reg = opened.setdefault(cid, {})
-            first_time = not self.state["cinemas_ok"].get(cid)
-            new = []
-            for mid, m in data["movies"].items():
-                dates = sorted(d["date"] for d in m["days"] if d.get("date"))
-                rec = self.state["movies"].get(mid)
-                if rec is None:
-                    # 猫眼列表里还没有的片子（新片刚开预售时常这样）：先记一条，排片全在明天以后就当预售处理。
-                    # 以前这里直接记成"已上映"，会漏掉这种开票提醒。
-                    rec = self.state["movies"][mid] = {"id": int(mid), "nm": m["nm"], "img": m["img"],
-                                                       "status": "cinema", "listed_at": NOW_S,
-                                                       "cin_first": dates[0] if dates else "",
-                                                       "wish_my": m.get("wish") or 0}
-                elif rec.get("status") == "cinema":
-                    rec["listed_at"] = NOW_S
-                    if dates and (not rec.get("cin_first") or dates[0] < rec["cin_first"]):
-                        rec["cin_first"] = dates[0]
-                if mid in reg:
-                    if self.unreleased(mid):
-                        reg[mid]["shows"] = self.compact_shows(m["days"])
-                        reg[mid]["count"] = sum(len(d["shows"]) for d in m["days"])
-                    continue
-                if not self.unreleased(mid):
-                    continue  # 已上映的片子不管
-                reg[mid] = {"at": "" if first_time else NOW_S, "first": dates[0] if dates else "",
-                            "count": sum(len(d["shows"]) for d in m["days"]),
-                            "shows": self.compact_shows(m["days"])}
-                if not first_time:
-                    # 登记的同时就把提醒记下来：后面处理别的片子万一出错，这条也不会被吞掉
-                    new.append(mid)
-                    o, star = reg[mid], self.watched(mid, m["nm"])
-                    rt = (self.state["movies"].get(mid) or {}).get("rt")
-                    body = f"《{m['nm']}》首场 {md(o['first'])}"
-                    if rt and len(rt) == 10 and o["first"] != rt:
-                        body += f"，{md(rt)}正式上映"
-                    self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
-                               push=self.ticket_mode == "all" or star, star=star,
-                               buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
-            # 上映超过 7 天的从登记表里清掉；上映了的不再留场次
-            week_ago = (NOW - timedelta(days=7)).date().isoformat()
-            for mid in list(reg):
-                r0 = self.state["movies"].get(mid) or {}
-                rt = r0.get("rt") or ""
-                if (len(rt) == 10 and rt < week_ago) or (not r0) or (len(rt) != 10 and (reg[mid].get("first") or "9") < week_ago):
-                    reg.pop(mid)
-                elif not self.unreleased(mid):
-                    reg[mid].pop("shows", None)
-            self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
-            # 只数还没上映的，和网页上"已开票"里显示的一致
-            n_pre = sum(1 for mid in data["movies"] if mid in reg and self.unreleased(mid))
+            except Exception as e:  # noqa: BLE001  猫眼换了数据格式之类：记成失败，连续失败会报警
+                traceback.print_exc()
+                self.mark(f"cinema:{cid}", False, f"程序出错：{e.__class__.__name__}")
+                continue
+            try:
+                self.scan_cinema(c, cid, data)
+            except Exception as e:  # noqa: BLE001  已经记下的开票提醒照发，另一家影院照查
+                traceback.print_exc()
+                self.mark(f"cinema:{cid}", False, f"程序出错：{e.__class__.__name__}")
+
+    def scan_cinema(self, c, cid, data):
+        opened = self.state["opened"]
+        reg = opened.setdefault(cid, {})
+        first_time = not self.state["cinemas_ok"].get(cid)
+        new = []
+        bad = 0
+        for mid, m in data["movies"].items():
+            had, n_ev = mid in reg, len(self.events)
+            try:
+                self.scan_movie(c, cid, reg, first_time, new, mid, m)
+            except Exception:  # noqa: BLE001  一部片的数据有问题，不能挡住后面的片（比如正在等的那部）
+                traceback.print_exc()
+                bad += 1
+                if not had and len(self.events) == n_ev:
+                    reg.pop(mid, None)  # 登记了开票却没记下提醒：撤掉登记，下一轮重来，不能悄悄漏掉
+        # 上映超过 7 天的从登记表里清掉；上映了的不再留场次
+        week_ago = (NOW - timedelta(days=7)).date().isoformat()
+        for mid in list(reg):
+            r0 = self.state["movies"].get(mid) or {}
+            rt = r0.get("rt") or ""
+            if (len(rt) == 10 and rt < week_ago) or (not r0) or (len(rt) != 10 and (reg[mid].get("first") or "9") < week_ago):
+                reg.pop(mid)
+            elif not self.unreleased(mid):
+                reg[mid].pop("shows", None)
+        self.state["cinemas_ok"][cid] = {"at": NOW_S, "name": data["name"] or c["name"], "addr": data["addr"]}
+        # 只数还没上映的，和网页上"已开票"里显示的一致
+        n_pre = sum(1 for mid in data["movies"] if mid in reg and self.unreleased(mid))
+        if bad:
+            self.mark(f"cinema:{cid}", False, f"有 {bad} 部片的排片数据读不懂，其余照常检查")
+        else:
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
+
+    def scan_movie(self, c, cid, reg, first_time, new, mid, m):
+        dates = sorted(d["date"] for d in m["days"] if d.get("date"))
+        rec = self.state["movies"].get(mid)
+        if rec is None:
+            # 猫眼列表里还没有的片子（新片刚开预售时常这样）：先记一条，排片全在明天以后就当预售处理。
+            # 以前这里直接记成"已上映"，会漏掉这种开票提醒。
+            rec = self.state["movies"][mid] = {"id": int(mid), "nm": m["nm"], "img": m["img"],
+                                               "status": "cinema", "listed_at": NOW_S,
+                                               "cin_first": dates[0] if dates else "",
+                                               "wish_my": m.get("wish") or 0}
+        elif rec.get("status") == "cinema":
+            rec["listed_at"] = NOW_S
+            if dates and (not rec.get("cin_first") or dates[0] < rec["cin_first"]):
+                rec["cin_first"] = dates[0]
+        if mid in reg:
+            if self.unreleased(mid):
+                reg[mid]["shows"] = self.compact_shows(m["days"])
+                reg[mid]["count"] = sum(len(d["shows"]) for d in m["days"])
+            return
+        if not self.unreleased(mid):
+            return  # 已上映的片子不管
+        reg[mid] = {"at": "" if first_time else NOW_S, "first": dates[0] if dates else "",
+                    "count": sum(len(d["shows"]) for d in m["days"]),
+                    "shows": self.compact_shows(m["days"])}
+        if not first_time:
+            # 登记的同时就把提醒记下来：后面处理别的片子万一出错，这条也不会被吞掉
+            new.append(mid)
+            o, star = reg[mid], self.watched(mid, m["nm"])
+            rt = (self.state["movies"].get(mid) or {}).get("rt")
+            body = f"《{m['nm']}》首场 {md(o['first'])}"
+            if rt and len(rt) == 10 and o["first"] != rt:
+                body += f"，{md(rt)}正式上映"
+            self.event("ticketing", f"🎟 {c['short']} 开票了", body, mid=mid, cid=cid,
+                       push=self.ticket_mode == "all" or star, star=star,
+                       buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
 
     @staticmethod
     def compact_shows(days, max_days=4, max_per_day=40):
@@ -759,6 +788,11 @@ class Radar:
 
     # ------------------------------------------------------------ 数据源健康
     def check_health(self, minutes=60):
+        sprinting = bool(self.sprint_targets())
+
+        def span(td):
+            m = int(td.total_seconds() // 60)
+            return f"{m} 分钟" if m < 60 else f"{m // 60} 小时" + (f" {m % 60} 分钟" if m % 60 >= 5 else "")
         names = {"maoyan": "猫眼电影列表"}
         names.update({f"cinema:{c['id']}": f"{c['short']} 开票检查" for c in self.cfg["cinemas"]})
         if os.environ.get("DATA_REPO") and os.environ.get("DATA_TOKEN"):
@@ -773,10 +807,15 @@ class Radar:
             if not stv.get("ok"):
                 if not f:
                     fails[src] = {"since": NOW_S, "alerted": False}
-                elif not f["alerted"] and ago(f["since"]) >= timedelta(minutes=minutes):
-                    self.event("health", "⚠️ 检查失败", f"{name}已经连续失败 {int(ago(f['since']).total_seconds() // 3600) or 1} 小时：{stv.get('msg')}。"
-                               f"这段时间开票提醒可能会漏，会继续自动重试。", push=True)
-                    f["alerted"] = True
+                else:
+                    # 星标片快上映、正在冲刺盯票时，影院查不到 15 分钟就报警（平时 1 小时）
+                    limit = 15 if (sprinting and src.startswith("cinema:")) else minutes
+                    if not f["alerted"] and ago(f["since"]) >= timedelta(minutes=limit):
+                        tail = ("星标电影正在盯票，这段时间开了票不会提醒，建议自己打开猫眼看一眼。"
+                                if limit < minutes else "这段时间开票提醒可能会漏。")
+                        self.event("health", "⚠️ 检查失败", f"{name}已经连续失败 {span(ago(f['since']))}：{stv.get('msg')}。"
+                                   f"{tail}会继续自动重试。", push=True)
+                        f["alerted"] = True
             elif f:
                 if f["alerted"]:
                     self.event("health", "✅ 已恢复", f"{name}恢复正常了。", push=True)

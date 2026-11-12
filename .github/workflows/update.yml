@@ -104,6 +104,22 @@ jobs:
           done
           exit 1
 
+      # 抓取这一步自己坏了（程序崩了、数据取不回来）时，上面的"检查失败"提醒也发不出来，所以在这里兜底：
+      # 连着 3 轮没跑成功就推送一次（只在第 3 轮推，不会每 5 分钟响一遍）
+      - name: 连续出错时提醒
+        if: ${{ failure() && inputs.mode != 'test-push' && steps.scrape.outcome != 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          BARK_SERVER: ${{ vars.BARK_SERVER }}
+        run: |
+          last=$(gh api "repos/${{ github.repository }}/actions/workflows/update.yml/runs?status=completed&per_page=20" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0:3] | map(.conclusion) | join(",")' || true)
+          echo "前三轮：$last"
+          if [ "$last" = "failure,failure,success" ]; then
+            python3 -c "import sys; sys.path.insert(0, 'scraper'); import notify; notify.push('⚠️ 电影雷达后台连续出错', '已经连着 3 轮没跑成功，这段时间开票不会提醒。会继续自动重试，一直不恢复的话来找我看看。', None, 'timeSensitive')" || true
+          fi
+
       - name: 防止 GitHub 60 天无活动自动停用定时任务
         if: ${{ !cancelled() && inputs.mode != 'test-push' && steps.scrape.outcome == 'success' }}
         env:

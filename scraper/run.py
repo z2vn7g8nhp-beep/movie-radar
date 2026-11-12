@@ -371,16 +371,27 @@ class Radar:
         seen = set()
         known = self.state["known"]
         new_coming = []
+        dated = []  # 早就在待映列表里、这轮才定下具体日期（或改了日期）的
         for status, lst in (("coming", coming), ("now", now)):  # now 覆盖 coming
             for rank, m in enumerate(lst):
                 mid = str(m["id"])
                 seen.add(mid)
                 rec = mv.setdefault(mid, {"id": m["id"]})
+                old_rt = rec.get("rt") or ""
+                if old_rt and rec.get("rt_src") != "list":
+                    # 旧记录没存过列表日期：以猫眼详情里的上映说明为准（"2026中国大陆上映" 即未定档）
+                    pm = re.match(r"\d{4}(?:-\d{2}(?:-\d{2})?)?", rec.get("pubDesc") or "")
+                    old_rt = pm.group(0) if pm else old_rt
+                new_rt = m.get("rt") or ""
+                if (status == "coming" and mid in known and rec.get("status") == "coming"
+                        and len(new_rt) == 10 and new_rt >= TODAY and old_rt and new_rt != old_rt):
+                    dated.append((rec, old_rt))
                 rec.update({
                     "nm": m.get("nm"), "img": m.get("img") or rec.get("img"),
                     "rt": m.get("rt") or rec.get("rt"), "star": m.get("star") or rec.get("star"),
                     "status": status, "ver": m.get("version") or m.get("ver") or rec.get("ver"),
                     "listed_at": NOW_S, "rank": rank, "wish_my": m.get("wish") or 0,
+                    "rt_src": "list",
                 })
                 if mid not in known:
                     known[mid] = NOW_S
@@ -400,6 +411,15 @@ class Radar:
                 star = self.watched(mid, rec.get("nm"))
                 # 关注的系列 / 影人有新片定档，不管"新片定档"开关都推送
                 self.event("coming", "🆕 新片定档", f"《{rec['nm']}》{rec.get('rt') or ''} 上映", mid=mid,
+                           push=bool(self.cfg["notify"].get("new_coming_movies")) or star, star=star)
+            for rec, old in dated[:10]:
+                mid = str(rec["id"])
+                star = self.watched(mid, rec.get("nm"))
+                if len(old) == 10:
+                    title, body = "📅 改档", f"《{rec['nm']}》改到 {rec['rt']} 上映（原定 {old}）"
+                else:
+                    title, body = "📅 定档", f"《{rec['nm']}》定档 {rec['rt']} 上映"
+                self.event("coming", title, body, mid=mid,
                            push=bool(self.cfg["notify"].get("new_coming_movies")) or star, star=star)
 
     # ------------------------------------------------------------ 猫眼详情（英文名、年份、简介等）

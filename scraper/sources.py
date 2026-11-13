@@ -103,9 +103,7 @@ class Maoyan:
             for sh in m.get("shows") or []:
                 plist = [{"tm": p.get("tm"), "th": p.get("th"), "tp": p.get("tp"),
                           "lang": p.get("lang"), "pr": p.get("sellPr") or p.get("vipPrice") or "",
-                          "seq": p.get("seqNo") or "",
-                          "available": p.get("enterShowSeat") == 1 and not p.get("forbiddenTip"),
-                          "round": str(p.get("saleDate") or "")} for p in sh.get("plist") or []]
+                          "seq": p.get("seqNo") or ""} for p in sh.get("plist") or []]
                 if plist:
                     days.append({"date": sh.get("showDate"), "shows": plist})
             if days:

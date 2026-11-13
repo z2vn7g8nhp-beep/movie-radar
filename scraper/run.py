@@ -514,6 +514,33 @@ class Radar:
         else:
             self.mark(f"cinema:{cid}", True, f"未上映已开票 {n_pre} 部" + (f"，新开票 {len(new)} 部" if new else ""))
 
+    def sale_sessions(self, days):
+        """只依据明确的场次状态判断补票；缺失场次不当作售罄。"""
+        sessions = {}
+        for day in days:
+            date = day.get("date") or ""
+            for show in day.get("shows") or []:
+                key = str(show.get("seq") or "|".join(str(x or "") for x in (date, show.get("tm"), show.get("th"), show.get("tp"))))
+                sessions[key] = {"available": bool(show.get("available", True)), "round": str(show.get("round") or "")}
+        return sessions
+
+    def check_sale_round(self, c, cid, record, mid, m):
+        current = self.sale_sessions(m["days"])
+        previous = record.get("sale_sessions")
+        changed = []
+        if previous is not None:
+            for key, value in current.items():
+                old = previous.get(key)
+                if value["available"] and (old is None or not old["available"] or old.get("round", "") != value["round"]):
+                    changed.append(key)
+        # 升级首次运行只建立基线，避免把已存在的场次全当成新一轮。
+        record["sale_sessions"] = {**(previous or {}), **current}
+        if changed and self.watched(mid, m["nm"]):
+            self.event("ticketing", f"🎟 {c['short']} 再次开票了",
+                       f"《{m['nm']}》新增或重新开售 {len(changed)} 场；星标持续监测。",
+                       mid=mid, cid=cid, push=True, star=True,
+                       buy=buy_url(self.cfg["city"]["maoyan_ci"], cid, mid))
+
     def scan_movie(self, c, cid, reg, first_time, new, mid, m):
         dates = sorted(d["date"] for d in m["days"] if d.get("date"))
         rec = self.state["movies"].get(mid)
@@ -530,6 +557,7 @@ class Radar:
                 rec["cin_first"] = dates[0]
         if mid in reg:
             if self.unreleased(mid):
+                self.check_sale_round(c, cid, reg[mid], mid, m)
                 reg[mid]["shows"] = self.compact_shows(m["days"])
                 reg[mid]["count"] = sum(len(d["shows"]) for d in m["days"])
             return
@@ -537,7 +565,8 @@ class Radar:
             return  # 已上映的片子不管
         reg[mid] = {"at": "" if first_time else NOW_S, "first": dates[0] if dates else "",
                     "count": sum(len(d["shows"]) for d in m["days"]),
-                    "shows": self.compact_shows(m["days"])}
+                    "shows": self.compact_shows(m["days"]),
+                    "sale_sessions": self.sale_sessions(m["days"])}
         if not first_time:
             # 登记的同时就把提醒记下来：后面处理别的片子万一出错，这条也不会被吞掉
             new.append(mid)

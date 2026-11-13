@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths: ["config.json", "scraper/**", "docs/**", ".github/workflows/**"]
   schedule:
-    - cron: "*/10 * * * *"   # 每 10 分钟兜底；GitHub 高峰期会晚，建议再配一个外部定时（见 README）
+    - cron: "3-59/5 * * * *"   # 每 5 分钟触发；避开整点拥堵，GitHub 高峰期仍可能延迟
   workflow_dispatch:
     inputs:
       mode:
